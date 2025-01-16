@@ -1,73 +1,49 @@
 package io.karma.kmbed.gradle
 
-import org.gradle.api.Plugin
-import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
-import org.gradle.internal.cc.base.logger
+import org.gradle.internal.extensions.stdlib.capitalized
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerPluginSupportPlugin
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCompilation
-import java.io.File
-import java.nio.file.Path
-import java.nio.file.StandardOpenOption
-import java.security.MessageDigest
-import java.util.*
 import javax.inject.Inject
-import kotlin.io.path.absolutePathString
-import kotlin.io.path.createDirectories
 import kotlin.io.path.div
-import kotlin.io.path.exists
-import kotlin.io.path.inputStream
-import kotlin.io.path.listDirectoryEntries
-import kotlin.io.path.outputStream
-import kotlin.io.path.relativeTo
 
 class KmbedGradlePlugin @Inject constructor(
     private val providers: ProviderFactory
-) : Plugin<Project>, KotlinCompilerPluginSupportPlugin {
-    companion object {
-        private val sha1Digest: MessageDigest = MessageDigest.getInstance("SHA-1")
-        private val fieldNameReplacePattern: Regex = Regex("""[/\\=:.]""")
-
-        @OptIn(ExperimentalStdlibApi::class)
-        private fun fileHash(path: Path): String {
-            return path.inputStream().use {
-                sha1Digest.update(it.readBytes())
-                sha1Digest.digest().toHexString()
-            }
-        }
-    }
-
-    lateinit var headersDirectory: Path
-
-    override fun apply(target: Project) {
-        headersDirectory = target.layout.buildDirectory.asFile.get().toPath() / "resourceHeaders"
-        headersDirectory.createDirectories() // Ensure the directory exists
-    }
-
+) : KotlinCompilerPluginSupportPlugin {
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
-        val nativeCompilation = kotlinCompilation as KotlinNativeCompilation
-        val resourceSets = nativeCompilation.allKotlinSourceSets.map { it.resources }
-        val resourceFiles = ArrayList<ResourceFile>()
-        for (set in resourceSets) {
-            for (directory in set.srcDirs) {
-                val resourceRoot = directory.toPath()
-                for (file in resourceRoot.listDirectoryEntries()) {
-                    resourceFiles += ResourceFile(resourceRoot, file)
+        val compilation = kotlinCompilation as KotlinNativeCompilation
+        val project = compilation.project
+        val compName = compilation.compilationName.capitalized()
+        // Register all required generation tasks for this compilation
+        val generationTasks = ArrayList<KmbedGenerateHeadersTask>()
+        for (sourceSet in compilation.kotlinSourceSets) {
+            val resourceSet = sourceSet.resources
+            val setName = resourceSet.name
+            val taskName = "generate${compName}${setName}ResourceHeaders"
+            generationTasks += project.tasks.register(taskName, KmbedGenerateHeadersTask::class.java) { task ->
+                task.group = "ḱmbed"
+                task.resourceDirectories.setFrom(*resourceSet.srcDirs.toTypedArray())
+                task.headerDirectory.set(
+                    (project.layout.buildDirectory.asFile.get()
+                        .toPath() / "resourceHeaders" / compName / setName).toFile()
+                )
+            }.get() // Register immediately
+        }
+        // Inject a cinterop configuration for all generation task outputs
+        compilation.cinterops.create("kmbedResources") { interopConfig ->
+            project.tasks.getByName(interopConfig.interopProcessingTaskName) { interopTask ->
+                for (generationTask in generationTasks) {
+                    interopTask.dependsOn(generationTask)
+                    interopTask.mustRunAfter(generationTask)
                 }
             }
-        }
-        val headerFiles = generateHeaders(resourceFiles)
-        logger.info("Adding CInterop resource configuration for compilation ${nativeCompilation.name}")
-        nativeCompilation.cinterops.create("kmbedResources") {
-            it.apply {
-                packageName = "io.karma.kmbed.generated"
-                headers(*headerFiles)
-            }
+            interopConfig.packageName = "io.karma.kmbed.generated"
+            interopConfig.headers(*generationTasks.flatMap { it.listHeaderFiles() }.toTypedArray())
         }
         return providers.provider { emptyList() }
     }
@@ -77,61 +53,5 @@ class KmbedGradlePlugin @Inject constructor(
 
     override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean {
         return kotlinCompilation.platformType == KotlinPlatformType.native
-    }
-
-    private fun generateHeaders(resourceFiles: ArrayList<ResourceFile>): Array<File> {
-        // Set up/load the current cache configuration to obtain resource hashes
-        val cacheConfig = Properties()
-        val cacheConfigFile = headersDirectory / "cache.properties"
-        if (cacheConfigFile.exists()) {
-            cacheConfigFile.inputStream().use(cacheConfig::load)
-        }
-        // Generate all headers & update cache config in one pass
-        val headerFiles = resourceFiles.map { generateHeader(it, cacheConfig) }.toTypedArray()
-        // Store the new cache config, overwriting the old one
-        cacheConfigFile.outputStream(StandardOpenOption.TRUNCATE_EXISTING).use {
-            cacheConfig.store(it, "Generated by the KMbed Gradle Plugin")
-        }
-        return headerFiles
-    }
-
-    private fun generateHeader(file: ResourceFile, cacheConfig: Properties): File {
-        val resourcePath = file.path
-        val relativePath = resourcePath.relativeTo(file.resourceRoot)
-        val headerPath = headersDirectory / relativePath
-
-        logger.info("Processing resource $resourcePath")
-
-        // Compute hash and compare to cached hash, return early if hash matches
-        val cacheKey = relativePath.absolutePathString()
-        val previousHash = cacheConfig[cacheKey]
-        val currentHash = fileHash(resourcePath)
-        if (previousHash == currentHash) {
-            // We can return the existing header right away
-            logger.info("Resource $resourcePath ($currentHash) didn't change, skipping processing")
-            return headerPath.toFile()
-        }
-
-        // Generate a new C/C++ resource header which forces the data into the .data section of the binary
-        val globalData = resourcePath.inputStream().use { it.readBytes() }
-        val globalName = cacheKey.replace(fieldNameReplacePattern, "_")
-        val header = ResourceHeader()
-        header.pushIndent()
-        header.append(
-            """
-            __attribute__((section(".data"), visibility("default")))
-            static const char g_${globalName}[${globalData.size}] = {${globalData.joinToString(", ")}};
-        """.trimIndent()
-        )
-        header.popIndent()
-
-        // Write out the new header file and update the entry's hash in the cache
-        headerPath.outputStream(StandardOpenOption.TRUNCATE_EXISTING).use {
-            it.bufferedWriter().write(header.render())
-        }
-        cacheConfig[cacheKey] = currentHash
-        logger.info("Processed resource $resourcePath ($currentHash)")
-
-        return headerPath.toFile()
     }
 }

@@ -6,6 +6,7 @@ import kotlin.io.path.div
 plugins {
     alias(libs.plugins.kotlin.jvm)
     `java-gradle-plugin`
+    `maven-publish`
 }
 
 dependencies {

@@ -44,11 +44,11 @@ internal class ZStreamingResource(
                 require(
                     uncompress(
                         pinnedArray.addressOf(0).reinterpret(), bytesUncompressed.ptr, address.reinterpret(),
-                        size.toUInt()
+                        size.convert()
                     ) == Z_OK
                 ) { "Could not decompress resource data for $path" }
                 require(
-                    bytesUncompressed.value == uncompressedSize.convert()
+                    bytesUncompressed.value.convert<UInt>() == uncompressedSize.toUInt()
                 ) { "Could not decompress resource data for $path" }
             }
         }
@@ -74,8 +74,12 @@ internal class ZStreamingSource(
     }
 
     private val stream: z_stream = nativeHeap.alloc<z_stream> {
-        zalloc = staticCFunction(::zlibAlloc)
-        zfree = staticCFunction(::zlibFree)
+        zalloc = staticCFunction { base, size, alignment ->
+            zlibAlloc(base, size, alignment)
+        }
+        zfree = staticCFunction { base, address ->
+            zlibFree(base, address)
+        }
     }.apply {
         require(deflateInit(ptr, Z_DEFAULT_COMPRESSION) == Z_OK) { "Could not initialize deflation stream" }
     }
