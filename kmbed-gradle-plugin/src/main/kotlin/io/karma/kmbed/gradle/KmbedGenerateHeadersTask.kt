@@ -6,14 +6,17 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import org.gradle.internal.impldep.org.apache.tools.zip.ZipOutputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.div
-import kotlin.io.path.inputStream
+import kotlin.io.path.fileSize
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.outputStream
+import kotlin.io.path.readBytes
 import kotlin.io.path.relativeTo
 
 /**
@@ -35,6 +38,8 @@ abstract class KmbedGenerateHeadersTask : DefaultTask() {
         return headerDirectory.asFile.get().toPath().listDirectoryEntries("*.h").map { it.toFile() }
     }
 
+    private val extension = project.extensions.getByType(KmbedProjectExtension::class.java)
+
     @TaskAction
     fun invoke() {
         for (resourceDir in resourceDirectories) {
@@ -46,6 +51,19 @@ abstract class KmbedGenerateHeadersTask : DefaultTask() {
         }
     }
 
+    private fun getGlobalData(path: Path): ByteArray {
+        // Zlib compression is only really effective for file sizes larger than ~256 bytes
+        if (!extension.compression || path.fileSize() < 256) {
+            return path.readBytes()
+        }
+        return ByteArrayOutputStream().use {
+            ZipOutputStream(it).use {
+                it.write(path.readBytes())
+            }
+            it.toByteArray()
+        }
+    }
+
     private fun generateHeader(resourcePath: Path, resourceRoot: Path): File {
         val relativePath = resourcePath.relativeTo(resourceRoot)
         val headerPath = headerDirectory.get().asFile.toPath() / relativePath
@@ -53,7 +71,7 @@ abstract class KmbedGenerateHeadersTask : DefaultTask() {
         logger.info("Processing resource $resourcePath")
 
         // Generate a new C/C++ resource header which forces the data into the .data section of the binary
-        val globalData = resourcePath.inputStream().use { it.readBytes() }
+        val globalData = getGlobalData(resourcePath)
         val globalName = relativePath.absolutePathString().replace(fieldNameReplacePattern, "_")
         val header = ResourceHeader()
         header.pushIndent()

@@ -1,5 +1,6 @@
 package io.karma.kmbed.gradle
 
+import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.internal.extensions.stdlib.capitalized
@@ -15,6 +16,11 @@ import kotlin.io.path.div
 class KmbedGradlePlugin @Inject constructor(
     private val providers: ProviderFactory
 ) : KotlinCompilerPluginSupportPlugin {
+    override fun apply(target: Project) {
+        target.extensions.create("kmbed", KmbedProjectExtension::class.java)
+        super.apply(target)
+    }
+
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
         val compilation = kotlinCompilation as KotlinNativeCompilation
         val project = compilation.project

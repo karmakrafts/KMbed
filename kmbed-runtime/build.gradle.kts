@@ -21,7 +21,7 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.io.bytestring)
                 implementation(libs.kotlinx.io.core)
-                implementation(libs.multiplatformMman)
+                implementation(libs.multiplatform.mman)
             }
         }
     }
