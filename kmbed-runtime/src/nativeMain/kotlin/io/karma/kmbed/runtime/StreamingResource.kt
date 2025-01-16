@@ -3,6 +3,7 @@ package io.karma.kmbed.runtime
 import io.karma.mman.RawMemorySource
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.usePinned
@@ -15,6 +16,7 @@ internal class StreamingResource(
 ) : Resource {
     override val isCompressed: Boolean = false
 
+    @OptIn(UnsafeNumber::class)
     override fun asByteArray(): ByteArray {
         require(size <= Int.MAX_VALUE) { "Resource $path is too big to fit inside a ByteArray" }
         return ByteArray(size.toInt()).apply {

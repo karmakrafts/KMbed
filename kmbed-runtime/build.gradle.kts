@@ -9,6 +9,12 @@ kotlin {
     linuxArm64()
     macosX64()
     macosArm64()
+    androidNativeX64()
+    androidNativeArm64()
+    androidNativeArm32()
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
     applyDefaultHierarchyTemplate()
     sourceSets {
         nativeMain {
