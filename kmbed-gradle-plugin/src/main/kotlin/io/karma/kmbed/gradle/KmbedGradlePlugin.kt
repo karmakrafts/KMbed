@@ -13,7 +13,7 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCompilation
 import javax.inject.Inject
 import kotlin.io.path.div
 
-class KmbedGradlePlugin @Inject constructor(
+open class KmbedGradlePlugin @Inject constructor(
     private val providers: ProviderFactory
 ) : KotlinCompilerPluginSupportPlugin {
     override fun apply(target: Project) {
@@ -24,19 +24,17 @@ class KmbedGradlePlugin @Inject constructor(
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
         val compilation = kotlinCompilation as KotlinNativeCompilation
         val project = compilation.project
-        val compName = compilation.compilationName.capitalized()
         // Register all required generation tasks for this compilation
         val generationTasks = ArrayList<KmbedGenerateHeadersTask>()
         for (sourceSet in compilation.kotlinSourceSets) {
             val resourceSet = sourceSet.resources
-            val setName = resourceSet.name
-            val taskName = "generate${compName}${setName}ResourceHeaders"
+            val setName = sourceSet.name
+            val taskName = "generate${setName.capitalized()}ResourceHeaders"
             generationTasks += project.tasks.register(taskName, KmbedGenerateHeadersTask::class.java) { task ->
                 task.group = "ḱmbed"
                 task.resourceDirectories.setFrom(*resourceSet.srcDirs.toTypedArray())
                 task.headerDirectory.set(
-                    (project.layout.buildDirectory.asFile.get()
-                        .toPath() / "resourceHeaders" / compName / setName).toFile()
+                    (project.layout.buildDirectory.asFile.get().toPath() / "resourceHeaders" / setName).toFile()
                 )
             }.get() // Register immediately
         }

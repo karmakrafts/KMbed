@@ -3,7 +3,7 @@ package io.karma.kmbed.gradle
 import org.intellij.lang.annotations.Language
 import java.util.*
 
-class ResourceHeader {
+internal class ResourceHeader {
     companion object {
         @Language("c++")
         private val COMMENT_HEADER: String = """

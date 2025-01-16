@@ -1,7 +1,10 @@
-import org.apache.tools.ant.filters.ReplaceTokens
-import java.nio.file.Path
-import kotlin.io.path.absolutePathString
+import java.nio.file.StandardOpenOption
+import kotlin.io.path.Path
+import kotlin.io.path.createDirectories
+import kotlin.io.path.createFile
+import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
+import kotlin.io.path.outputStream
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -14,44 +17,40 @@ dependencies {
     compileOnly(libs.kotlin.gradle.plugin)
 }
 
-val generatedSourceDir: Path = projectDir.toPath() / "build" / "generated" / "sources"
-val buildInfoFile: Path = projectDir.toPath() / "src" / "main" /
-        rootProject.group.toString().replace('.', '/') / rootProject.name / "gradle" / "BuildInfo.kt"
-
-sourceSets {
-    val main by getting {
-        kotlin {
-            exclude(buildInfoFile.absolutePathString())
-            srcDir(generatedSourceDir)
+kotlin {
+    sourceSets {
+        main {
+            resources.srcDir("build/generated")
         }
     }
 }
 
 tasks {
-    register("processBuildInfo", Copy::class) {
-        from(buildInfoFile) {
-            filter<ReplaceTokens>(
-                "tokens" to mapOf(
-                    "GROUP" to group,
-                    "VERSION" to version,
-                    "PLUGIN_NAME" to "${rootProject.name}-compiler-plugin"
-                )
-            )
+    processResources {
+        doFirst {
+            val path = (layout.buildDirectory.asFile.get().toPath() / "generated" / "version")
+            path.deleteIfExists()
+            path.parent.createDirectories()
+            path.outputStream(StandardOpenOption.CREATE).bufferedWriter().use {
+                it.write("${rootProject.version}")
+            }
         }
-        into(generatedSourceDir)
+    }
+
+    val compileJava by getting {
+        dependsOn(processResources)
     }
 }
 
-@Suppress("UnstableApiUsage")
-gradlePlugin {
+@Suppress("UnstableApiUsage") gradlePlugin {
     System.getenv("CI_PROJECT_URL")?.let {
         website.set(it)
         vcsUrl.set(it)
     }
     plugins {
         create("KMbed Gradle Plugin") {
-            id = "$group.${rootProject.name}.gradle-plugin"
-            implementationClass = "$group.${rootProject.name}.gradle.KmbedGradlePlugin"
+            id = "$group.${rootProject.name}-gradle-plugin"
+            implementationClass = "$group.gradle.KmbedGradlePlugin"
             displayName = "KMbed Gradle Plugin"
             description = "Gradle plugin for applying the KMbed Kotlin compiler plugin"
             tags.addAll("kotlin", "native", "interop", "codegen")

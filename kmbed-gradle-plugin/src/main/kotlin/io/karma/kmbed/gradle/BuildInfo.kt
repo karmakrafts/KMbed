@@ -8,10 +8,20 @@ import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
  * update it in one place.
  */
 internal object BuildInfo {
-    const val GROUP: String = "{{GROUP}}"
-    const val VERSION: String = "{{VERSION}}"
-
-    const val PLUGIN_NAME: String = "{{PLUGIN_NAME}}"
+    const val GROUP: String = "io.karma.kmbed"
+    const val PLUGIN_NAME: String = "kmbed-gradle-plugin"
     const val PLUGIN_ID: String = "$GROUP.$PLUGIN_NAME"
+
+    val VERSION: String by lazy {
+        try {
+            BuildInfo::class.java.getResourceAsStream("/version")?.bufferedReader().use {
+                it?.readText()
+            }!!
+        }
+        catch (_: Throwable) {
+            "0.0.0.0" // Just let the error propagate like this
+        }
+    }
+
     val PLUGIN_ARTIFACT: SubpluginArtifact = SubpluginArtifact(GROUP, PLUGIN_NAME, VERSION)
 }
