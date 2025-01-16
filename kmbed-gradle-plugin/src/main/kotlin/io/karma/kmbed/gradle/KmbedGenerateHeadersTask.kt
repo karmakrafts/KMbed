@@ -6,11 +6,11 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-import org.gradle.internal.impldep.org.apache.tools.zip.ZipOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import java.util.zip.DeflaterOutputStream
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.div
 import kotlin.io.path.fileSize
@@ -57,7 +57,7 @@ abstract class KmbedGenerateHeadersTask : DefaultTask() {
             return path.readBytes()
         }
         return ByteArrayOutputStream().use {
-            ZipOutputStream(it).use {
+            DeflaterOutputStream(it).use {
                 it.write(path.readBytes())
             }
             it.toByteArray()

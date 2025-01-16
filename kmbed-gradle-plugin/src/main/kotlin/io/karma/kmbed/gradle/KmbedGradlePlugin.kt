@@ -41,16 +41,16 @@ class KmbedGradlePlugin @Inject constructor(
             }.get() // Register immediately
         }
         // Inject a cinterop configuration for all generation task outputs
-        compilation.cinterops.create("kmbedResources") { interopConfig ->
-            project.tasks.getByName(interopConfig.interopProcessingTaskName) { interopTask ->
-                for (generationTask in generationTasks) {
-                    interopTask.dependsOn(generationTask)
-                    interopTask.mustRunAfter(generationTask)
-                }
-            }
-            interopConfig.packageName = "io.karma.kmbed.generated"
-            interopConfig.headers(*generationTasks.flatMap { it.listHeaderFiles() }.toTypedArray())
-        }
+        //compilation.cinterops.create("kmbedResources") { interopConfig ->
+        //    project.tasks.getByName(interopConfig.interopProcessingTaskName) { interopTask ->
+        //        for (generationTask in generationTasks) {
+        //            interopTask.dependsOn(generationTask)
+        //            interopTask.mustRunAfter(generationTask)
+        //        }
+        //    }
+        //    interopConfig.packageName = "io.karma.kmbed.generated"
+        //    interopConfig.headers(*generationTasks.flatMap { it.listHeaderFiles() }.toTypedArray())
+        //}
         return providers.provider { emptyList() }
     }
 
