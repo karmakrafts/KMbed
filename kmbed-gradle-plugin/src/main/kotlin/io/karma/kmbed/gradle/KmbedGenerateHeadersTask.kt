@@ -11,7 +11,7 @@ import java.io.File
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.zip.DeflaterOutputStream
-import kotlin.io.path.absolutePathString
+import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
 import kotlin.io.path.fileSize
 import kotlin.io.path.listDirectoryEntries
@@ -64,28 +64,65 @@ abstract class KmbedGenerateHeadersTask : DefaultTask() {
         }
     }
 
+    private fun String.chunkedOnNextSpace(length: Int): List<String> {
+        val words = split(" ")
+        val lines = ArrayList<String>()
+        var currentLine = StringBuilder()
+        for (word in words) {
+            // If adding the word exceeds the line length, start a new line
+            if (currentLine.length + word.length + (if (currentLine.isNotEmpty()) 1 else 0) > length) {
+                lines.add(currentLine.toString())
+                currentLine = StringBuilder(word)
+                continue
+            }
+            // If it fits, add the word to the current line
+            if (currentLine.isNotEmpty()) {
+                currentLine.append(" ")
+            }
+            currentLine.append(word)
+        }
+        // Add the last line if it's not empty
+        if (currentLine.isNotEmpty()) {
+            lines.add(currentLine.toString())
+        }
+        return lines
+    }
+
+    @OptIn(ExperimentalStdlibApi::class)
     private fun generateHeader(resourcePath: Path, resourceRoot: Path): File {
         val relativePath = resourcePath.relativeTo(resourceRoot)
-        val headerPath = headerDirectory.get().asFile.toPath() / relativePath
+        val fileName = relativePath.fileName.toString()
+        val headerFileName = fileName.substringBeforeLast(".")
+        val parentPath = relativePath.parent
 
-        logger.info("Processing resource $resourcePath")
+        val headerBasePath = if (parentPath != null) headerDirectory.get().asFile.toPath() / parentPath
+        else headerDirectory.get().asFile.toPath()
+
+        val headerPath = headerBasePath / "$headerFileName.h"
+
+        logger.info("Processing resource $resourcePath into $headerPath")
 
         // Generate a new C/C++ resource header which forces the data into the .data section of the binary
         val globalData = getGlobalData(resourcePath)
-        val globalName = relativePath.absolutePathString().replace(fieldNameReplacePattern, "_")
-        val header = ResourceHeader()
-        header.pushIndent()
-        header.append(
-            """
-            __attribute__((section(".data"), visibility("default")))
-            static const char g_${globalName}[${globalData.size}] = {${globalData.joinToString(", ")}};
-        """.trimIndent()
-        )
-        header.popIndent()
+        val globalName = relativePath.toString().replace(fieldNameReplacePattern, "_")
+        val header = ResourceHeader().apply {
+            line("""__attribute__((section(".data"), visibility("default")))""")
+            line("""static const char g_${globalName}[${globalData.size}] = {""")
+            pushIndent()
+            // @formatter:off
+            globalData.joinToString(", ") { "0x${it.toHexString()}" }
+                .chunkedOnNextSpace(100)
+                .forEach(::line)
+            // @formatter:on
+            popIndent()
+            line("}};")
+        }
 
         // Write out the new header file and update the entry's hash in the cache
-        headerPath.outputStream(StandardOpenOption.TRUNCATE_EXISTING).use {
-            it.bufferedWriter().write(header.render())
+        headerPath.deleteIfExists()
+        headerPath.outputStream(StandardOpenOption.CREATE).bufferedWriter().use {
+            it.write(header.render())
+            it.flush()
         }
 
         return headerPath.toFile()

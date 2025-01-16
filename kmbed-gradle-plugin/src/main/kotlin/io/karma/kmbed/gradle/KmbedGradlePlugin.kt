@@ -25,19 +25,18 @@ open class KmbedGradlePlugin @Inject constructor(
         val compilation = kotlinCompilation as KotlinNativeCompilation
         val project = compilation.project
         // Register all required generation tasks for this compilation
-        val generationTasks = ArrayList<KmbedGenerateHeadersTask>()
-        for (sourceSet in compilation.kotlinSourceSets) {
-            val resourceSet = sourceSet.resources
-            val setName = sourceSet.name
-            val taskName = "generate${setName.capitalized()}ResourceHeaders"
-            generationTasks += project.tasks.register(taskName, KmbedGenerateHeadersTask::class.java) { task ->
-                task.group = "ḱmbed"
-                task.resourceDirectories.setFrom(*resourceSet.srcDirs.toTypedArray())
-                task.headerDirectory.set(
-                    (project.layout.buildDirectory.asFile.get().toPath() / "resourceHeaders" / setName).toFile()
-                )
-            }.get() // Register immediately
-        }
+        val resourceSet = compilation.allKotlinSourceSets
+            .flatMap { it.resources.srcDirs }
+            .filter { it.exists() }
+        val compName = compilation.disambiguatedName
+        val taskName = "generate${compName.capitalized()}ResourceHeaders"
+        val generationTask = project.tasks.register(taskName, KmbedGenerateHeadersTask::class.java) { task ->
+            task.group = "ḱmbed"
+            task.resourceDirectories.setFrom(*resourceSet.toTypedArray())
+            task.headerDirectory.set(
+                (project.layout.buildDirectory.asFile.get().toPath() / "resourceHeaders" / compName).toFile()
+            )
+        }.get() // Register immediately
         // Inject a cinterop configuration for all generation task outputs
         //compilation.cinterops.create("kmbedResources") { interopConfig ->
         //    project.tasks.getByName(interopConfig.interopProcessingTaskName) { interopTask ->
