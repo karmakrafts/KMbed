@@ -1,4 +1,4 @@
-package net.folivo.kmbed.gradle
+package io.karma.kmbed.gradle
 
 import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
 

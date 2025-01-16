@@ -27,7 +27,7 @@ sourceSets {
 }
 
 tasks {
-    create<Copy>("processBuildInfo") {
+    register("processBuildInfo", Copy::class) {
         from(buildInfoFile) {
             filter<ReplaceTokens>(
                 "tokens" to mapOf(
@@ -50,7 +50,7 @@ gradlePlugin {
     plugins {
         create("KMbed Gradle Plugin") {
             id = "$group.${rootProject.name}.gradle-plugin"
-            implementationClass = "$group.${rootProject.name}.gradle.MbedGradlePlugin"
+            implementationClass = "$group.${rootProject.name}.gradle.KmbedGradlePlugin"
             displayName = "KMbed Gradle Plugin"
             description = "Gradle plugin for applying the KMbed Kotlin compiler plugin"
             tags.addAll("kotlin", "native", "interop", "codegen")

@@ -10,10 +10,11 @@ kotlin {
     macosArm64()
     applyDefaultHierarchyTemplate()
     sourceSets {
-        commonMain {
+        nativeMain {
             dependencies {
                 implementation(libs.kotlinx.io.bytestring)
                 implementation(libs.kotlinx.io.core)
+                implementation(libs.multiplatformMman)
             }
         }
     }
