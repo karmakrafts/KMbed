@@ -2,6 +2,7 @@ package io.karma.kmbed.runtime
 
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.Pinned
 import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
@@ -28,12 +29,15 @@ import platform.zlib.z_stream
 
 @ExperimentalForeignApi
 internal class ZStreamingResource(
-    override val path: String,
-    override val address: COpaquePointer,
-    override val size: Long,
-    override val uncompressedSize: Long
-) : Resource {
+    override val path: String, val ref: Pinned<UByteArray>, override val uncompressedSize: Long
+) : Resource, PinnedResource {
     override val isCompressed: Boolean = true
+
+    override val address: COpaquePointer
+        get() = ref.addressOf(0)
+
+    override val size: Long
+        get() = ref.get().size.toLong()
 
     @OptIn(UnsafeNumber::class)
     override fun asByteArray(): ByteArray = memScoped {
@@ -55,12 +59,15 @@ internal class ZStreamingResource(
     }
 
     override fun asSource(bufferSize: Int): RawSource = ZStreamingSource(this, bufferSize)
+
+    override fun release() {
+        ref.unpin()
+    }
 }
 
 @ExperimentalForeignApi
 internal class ZStreamingSource(
-    private val resource: ZStreamingResource,
-    private val bufferSize: Int
+    private val resource: ZStreamingResource, private val bufferSize: Int
 ) : RawSource {
     companion object {
         private fun zlibAlloc(base: voidpf?, size: uInt, alignment: uInt): voidpf? {
@@ -91,7 +98,7 @@ internal class ZStreamingSource(
     }
 
     override fun close() {
-        if(isClosed) return
+        if (isClosed) return
         nativeHeap.free(stream)
         isClosed = true
     }

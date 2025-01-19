@@ -12,6 +12,7 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.zip.DeflaterOutputStream
 import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
 import kotlin.io.path.fileSize
@@ -50,7 +51,6 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
     }
 
     private fun getGlobalData(path: Path): ByteArray {
-        // Zlib compression is only really effective for file sizes larger than ~256 bytes
         if (!extension.compression || path.fileSize() < extension.compressionThreshold) {
             return path.readBytes()
         }
@@ -93,20 +93,21 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
         val sourceFileName = fileName.substringBeforeLast(".")
         val parentPath = relativePath.parent
 
-        val sourceBasePath = if (parentPath != null) sourceDirectory.get().asFile.toPath() / parentPath
-        else sourceDirectory.get().asFile.toPath()
+        val packageName = parentPath?.let {
+            "io.karma.kmbed.generated.${
+                it.toString().lowercase().replace(File.separator, ".")
+            }"
+        } ?: "io.karma.kmbed.generated"
+
+        val sourceBasePath = parentPath?.let {
+            sourceDirectory.get().asFile.toPath() / it
+        } ?: sourceDirectory.get().asFile.toPath()
 
         val sourcePath = sourceBasePath / "$sourceFileName.kt"
-        // @formatter:off
-        val packageName = if(parentPath != null) "io.karma.kmbed.generated.${parentPath.toString()
-            .lowercase()
-            .replace(File.separator, ".")}"
-        else "io.karma.kmbed.generated"
-        // @formatter:on
 
         logger.info("Processing resource $resourcePath into $sourcePath")
 
-        // Generate a new C/C++ resource header which forces the data into the .data section of the binary
+        // Generate a new Kotlin source file
         val fieldData = getGlobalData(resourcePath)
         val fieldName = relativePath.toString().replace(fieldNameReplacePattern, "_")
         val source = SourceBuilder().apply {
@@ -128,6 +129,7 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
 
         // Write out the new source file and update the entry's hash in the cache
         sourcePath.deleteIfExists()
+        sourcePath.parent?.createDirectories()
         sourcePath.outputStream(StandardOpenOption.CREATE).bufferedWriter().use {
             it.write(source.render())
             it.flush()
