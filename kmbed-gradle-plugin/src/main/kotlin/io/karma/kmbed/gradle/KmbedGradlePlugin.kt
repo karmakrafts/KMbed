@@ -11,6 +11,8 @@ import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCompilation
 import javax.inject.Inject
+import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.createDirectories
 import kotlin.io.path.div
 
 open class KmbedGradlePlugin @Inject constructor(
@@ -21,33 +23,28 @@ open class KmbedGradlePlugin @Inject constructor(
         super.apply(target)
     }
 
+    @OptIn(ExperimentalPathApi::class)
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
         val compilation = kotlinCompilation as KotlinNativeCompilation
         val project = compilation.project
         // Register all required generation tasks for this compilation
-        val resourceSet = compilation.allKotlinSourceSets
-            .flatMap { it.resources.srcDirs }
-            .filter { it.exists() }
-        val compName = compilation.disambiguatedName
-        val taskName = "generate${compName.capitalized()}ResourceHeaders"
-        val generationTask = project.tasks.register(taskName, KmbedGenerateHeadersTask::class.java) { task ->
-            task.group = "ḱmbed"
+        val resourceSet = compilation.allKotlinSourceSets.flatMap { it.resources.srcDirs }.filter { it.exists() }
+        val compName = "${compilation.target.name}${compilation.name.capitalized()}"
+        val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / compName
+        outputDir.createDirectories()
+        val taskName = "generate${compName.capitalized()}KmbedSources"
+        val generateTask = project.tasks.register(taskName, KmbedGenerateSourcesTask::class.java) { task ->
+            task.group = "kmbed"
             task.resourceDirectories.setFrom(*resourceSet.toTypedArray())
-            task.headerDirectory.set(
-                (project.layout.buildDirectory.asFile.get().toPath() / "resourceHeaders" / compName).toFile()
-            )
-        }.get() // Register immediately
-        // Inject a cinterop configuration for all generation task outputs
-        //compilation.cinterops.create("kmbedResources") { interopConfig ->
-        //    project.tasks.getByName(interopConfig.interopProcessingTaskName) { interopTask ->
-        //        for (generationTask in generationTasks) {
-        //            interopTask.dependsOn(generationTask)
-        //            interopTask.mustRunAfter(generationTask)
-        //        }
-        //    }
-        //    interopConfig.packageName = "io.karma.kmbed.generated"
-        //    interopConfig.headers(*generationTasks.flatMap { it.listHeaderFiles() }.toTypedArray())
-        //}
+            task.sourceDirectory.set(outputDir.toFile())
+        }.get()
+        // Add dependency to compile task so sources get automatically regenerated on every build
+        project.tasks.getByName(compilation.compileKotlinTaskName) { task ->
+            task.dependsOn(generateTask)
+            task.mustRunAfter(generateTask)
+        }
+        // Inject generated sources into default source set of current compilation
+        compilation.defaultSourceSet.kotlin.srcDir(outputDir.toFile())
         return providers.provider { emptyList() }
     }
 
