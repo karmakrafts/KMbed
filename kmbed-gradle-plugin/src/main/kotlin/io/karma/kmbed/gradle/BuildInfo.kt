@@ -18,5 +18,5 @@ internal object BuildInfo {
         }
     }
 
-    val PLUGIN_ARTIFACT: SubpluginArtifact = SubpluginArtifact(GROUP, PLUGIN_NAME, VERSION)
+    val PLUGIN_ARTIFACT: SubpluginArtifact = SubpluginArtifact(GROUP, "kmbed-compiler-plugin", VERSION)
 }

@@ -17,4 +17,3 @@ dependencyResolutionManagement {
 
 include("kmbed-runtime")
 include("kmbed-gradle-plugin")
-include("kmbed-compiler-plugin")

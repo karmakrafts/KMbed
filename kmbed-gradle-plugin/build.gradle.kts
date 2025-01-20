@@ -1,7 +1,5 @@
 import java.nio.file.StandardOpenOption
-import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
-import kotlin.io.path.createFile
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
 import kotlin.io.path.outputStream
@@ -26,7 +24,7 @@ kotlin {
 }
 
 tasks {
-    processResources {
+    val createVersionFile by registering {
         doFirst {
             val path = (layout.buildDirectory.asFile.get().toPath() / "generated" / "version")
             path.deleteIfExists()
@@ -35,11 +33,10 @@ tasks {
                 it.write("${rootProject.version}")
             }
         }
+        outputs.upToDateWhen { false } // Always re-generate this file
     }
-
-    val compileJava by getting {
-        dependsOn(processResources)
-    }
+    processResources { dependsOn(createVersionFile) }
+    compileKotlin { dependsOn(processResources) }
 }
 
 @Suppress("UnstableApiUsage") gradlePlugin {
