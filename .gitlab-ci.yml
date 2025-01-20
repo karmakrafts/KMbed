@@ -1,0 +1,71 @@
+stages:
+  - publish
+  - release
+
+cache:
+  paths:
+    - .gradle/wrapper
+    - .gradle/caches
+    - .kotlin
+
+publish-linux:
+  stage: publish
+  before_script:
+    - export JAVA_HOME=/home/sdks/zulu-17
+  script:
+    - ./gradlew
+      clean
+      :kmbed-runtime:publish{KotlinMultiplatform,LinuxX64,LinuxArm64,AndroidNativeX64,AndroidNativeArm64,AndroidNativeArm32}PublicationToGitlabRepository
+      publishPluginMavenPublicationToGitlabRepository
+      --no-daemon
+      --stacktrace
+  only:
+    - master
+  tags:
+    - linux
+
+publish-windows:
+  stage: publish
+  script:
+    - ./gradlew
+      clean
+      :kmbed-runtime:publishMingwX64PublicationToGitlabRepository
+      --no-daemon
+      --stacktrace
+  only:
+    - master
+  tags:
+    - windows
+
+publish-macos:
+  stage: publish
+  before_script:
+    - export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
+  script:
+    - ./gradlew
+      clean
+      :kmbed-runtime:publish{MacosX64,MacosArm64,IosX64,IosArm64,IosSimulatorArm64}PublicationToGitlabRepository
+      --no-daemon
+      --stacktrace
+  only:
+    - master
+  tags:
+    - macos
+
+create-release:
+  stage: release
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  before_script:
+    - echo "Fetching project version from libs.versions.toml"
+    - export PROJECT_VERSION=$(./gradlew generateVersionInfo --quiet)
+  script:
+    - echo "Creating release for version $PROJECT_VERSION.$CI_PIPELINE_IID"
+  release:
+    tag_name: '$(cat .version).$CI_PIPELINE_IID'
+    description: '$(cat .version).$CI_PIPELINE_IID'
+    ref: '$CI_COMMIT_SHA'
+  tags:
+    - linux
