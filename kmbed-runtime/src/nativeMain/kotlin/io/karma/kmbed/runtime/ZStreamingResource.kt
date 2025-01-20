@@ -6,7 +6,6 @@ import kotlinx.cinterop.Pinned
 import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
-import kotlinx.cinterop.convert
 import kotlinx.cinterop.free
 import kotlinx.cinterop.interpretCPointer
 import kotlinx.cinterop.memScoped
@@ -15,15 +14,15 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.usePinned
-import kotlinx.cinterop.value
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
-import platform.zlib.Z_DEFAULT_COMPRESSION
+import platform.zlib.Z_FINISH
 import platform.zlib.Z_OK
-import platform.zlib.deflateInit
+import platform.zlib.Z_STREAM_END
+import platform.zlib.inflate
+import platform.zlib.inflateEnd
+import platform.zlib.inflateInit
 import platform.zlib.uInt
-import platform.zlib.uLongfVar
-import platform.zlib.uncompress
 import platform.zlib.voidpf
 import platform.zlib.z_stream
 
@@ -44,16 +43,19 @@ internal class ZStreamingResource(
         require(uncompressedSize <= Int.MAX_VALUE) { "Resource $path is too big to fit inside a ByteArray" }
         return ByteArray(uncompressedSize.toInt()).apply {
             usePinned { pinnedArray ->
-                val bytesUncompressed = alloc<uLongfVar>()
-                require(
-                    uncompress(
-                        pinnedArray.addressOf(0).reinterpret(), bytesUncompressed.ptr, address.reinterpret(),
-                        size.convert()
-                    ) == Z_OK
-                ) { "Could not decompress resource data for $path" }
-                require(
-                    bytesUncompressed.value.convert<UInt>() == uncompressedSize.toUInt()
-                ) { "Could not decompress resource data for $path" }
+                val stream = alloc<z_stream>()
+                require(inflateInit(stream.ptr) == Z_OK) { "Could not initialize decompression stream" }
+                stream.apply {
+                    avail_in = this@ZStreamingResource.size.toUInt()
+                    next_in = address.reinterpret()
+                    avail_out = uncompressedSize.toUInt()
+                    next_out = pinnedArray.addressOf(0).reinterpret()
+                }
+                require(inflate(stream.ptr, Z_FINISH) == Z_STREAM_END) {
+                    inflateEnd(stream.ptr)
+                    "Could not decompress resource stream"
+                }
+                inflateEnd(stream.ptr)
             }
         }
     }
@@ -88,7 +90,7 @@ internal class ZStreamingSource(
             zlibFree(base, address)
         }
     }.apply {
-        require(deflateInit(ptr, Z_DEFAULT_COMPRESSION) == Z_OK) { "Could not initialize deflation stream" }
+        require(inflateInit(ptr) == Z_OK) { "Could not initialize deflation stream" }
     }
 
     private var isClosed: Boolean = false

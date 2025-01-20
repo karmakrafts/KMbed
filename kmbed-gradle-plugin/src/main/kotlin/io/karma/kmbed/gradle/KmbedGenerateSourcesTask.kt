@@ -106,7 +106,7 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
 
             newline()
 
-            line("""package io.karma.kmbed.index""")
+            line("""package ${extension.resourceNamespace}""")
 
             newline()
 
@@ -157,10 +157,10 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
         val parentPath = relativePath.parent
 
         val packageName = parentPath?.let {
-            "io.karma.kmbed.generated.${
+            "${extension.resourceNamespace}.rdata.${
                 it.toString().lowercase().replace(File.separator, ".")
             }"
-        } ?: "io.karma.kmbed.generated"
+        } ?: "${extension.resourceNamespace}.rdata"
 
         val sourceDir = sourceDirectory.get().asFile.toPath()
         val sourceBasePath = parentPath?.let { sourceDir / it } ?: sourceDir
@@ -199,7 +199,7 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
             it.flush()
         }
 
-        sourcePath.relativeTo(sourceDir).apply {
+        relativePath.apply {
             require(this !in resources) { "Resource $resourcePath already exists" }
             resources[this] = ResourceInfo(
                 fieldName, "$packageName.__kmbed_$fieldName", fieldData.size, uncompressedSize

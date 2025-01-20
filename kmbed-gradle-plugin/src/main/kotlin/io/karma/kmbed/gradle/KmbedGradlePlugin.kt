@@ -2,6 +2,7 @@ package io.karma.kmbed.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
@@ -15,7 +16,7 @@ open class KmbedGradlePlugin @Inject constructor(
     private val providers: ProviderFactory
 ) : Plugin<Project> {
     override fun apply(project: Project) {
-        project.extensions.create("kmbed", KmbedProjectExtension::class.java)
+        project.extensions.create("kmbed", KmbedProjectExtension::class.java, project.group.toString())
         project.pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
             val kotlinExtension = requireNotNull(project.kotlinExtension as? KotlinMultiplatformExtension) {
                 "KMbed requires Kotlin Multiplatform"
@@ -37,16 +38,23 @@ open class KmbedGradlePlugin @Inject constructor(
                             task.resourceDirectories.setFrom(*resourceSet.toTypedArray())
                             task.sourceDirectory.set(outputDir.toFile())
                         }.get()
+
                         // Add dependency from compile task so sources get automatically regenerated on every build
-                        project.tasks.getByName(compilation.compileKotlinTaskName) { task ->
-                            task.dependsOn(generateTask)
-                            task.mustRunAfter(generateTask)
+                        fun Task.dependsOnGeneration() {
+                            dependsOn(generateTask)
+                            mustRunAfter(generateTask)
                             // We depend on either source set, defaulting to main instead of test
                             // TODO: find a more robust solution to this
-                            val commonName = if ("test" in task.name.lowercase()) "generateNativeTestKmbedSources"
+                            val commonName = if ("test" in name.lowercase()) "generateNativeTestKmbedSources"
                             else "generateNativeMainKmbedSources"
-                            task.dependsOn(commonName)
-                            task.mustRunAfter(commonName)
+                            dependsOn(commonName)
+                            mustRunAfter(commonName)
+                        }
+                        project.tasks.getByName(compilation.compileKotlinTaskName) { task ->
+                            task.dependsOnGeneration()
+                        }
+                        project.tasks.getByName("commonizeNativeDistribution") { task ->
+                            task.dependsOnGeneration()
                         }
                         // Inject generated sources into default source set of current compilation
                         compilation.defaultSourceSet.kotlin.srcDir(outputDir.toFile())
