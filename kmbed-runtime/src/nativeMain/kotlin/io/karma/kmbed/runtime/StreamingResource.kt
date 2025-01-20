@@ -33,7 +33,7 @@ internal class StreamingResource(
         }
     }
 
-    override fun asSource(bufferSize: Int): RawSource = RawMemorySource(address, size, bufferSize)
+    override fun asSource(): RawSource = RawMemorySource(address, size)
 
     override fun release() {
         ref.unpin()

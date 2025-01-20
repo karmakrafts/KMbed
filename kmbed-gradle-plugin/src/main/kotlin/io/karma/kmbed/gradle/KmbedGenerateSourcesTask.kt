@@ -118,7 +118,7 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
             newline()
 
             line("""@OptIn(GeneratedKmbedApi::class)""")
-            line("""object Resources : AbstractResources() {""")
+            line("""private object Resources : AbstractResources() {""")
             pushIndent()
             line("""init {""")
             pushIndent()

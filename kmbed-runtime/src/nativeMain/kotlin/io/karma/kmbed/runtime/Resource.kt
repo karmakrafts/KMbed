@@ -24,7 +24,7 @@ interface Resource {
 
     fun asByteArray(): ByteArray
 
-    fun asSource(bufferSize: Int = PAGE_SIZE.toInt()): RawSource
+    fun asSource(): RawSource
 
     fun unpackTo(path: Path, override: Boolean = false, bufferSize: Int = PAGE_SIZE.toInt()): Boolean {
         if (SystemFileSystem.exists(path)) {
