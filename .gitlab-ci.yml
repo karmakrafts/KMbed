@@ -1,15 +1,186 @@
+workflow:
+  auto_cancel:
+    on_new_commit: interruptible
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
 stages:
+  - build
+  - security
   - publish
-  - release
 
-cache:
-  paths:
-    - .gradle/wrapper
-    - .gradle/caches
-    - .kotlin
+variables:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false
+  GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
+  KONAN_DATA_DIR: $CI_PROJECT_DIR/.konan
 
-publish-linux:
+# ------------------------------ Conditions
+
+.if-merge-request-or-main: &if-merge-request-or-main
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+  - if: $CI_PIPELINE_SOURCE == "schedule"
+    when: never
+
+.if-main: &if-main
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  - if: $CI_PIPELINE_SOURCE == "schedule"
+    when: never
+
+.if-release: &if-release
+  - if: '$CI_COMMIT_TAG =~ /^\d+.\d+.\d+.*/'
+  - if: $CI_PIPELINE_SOURCE == "schedule"
+    when: never
+
+# ------------------------------ Caches
+
+.cache-linux: &cache-linux
+  - key: "$CI_PROJECT_NAME-cache-linux"
+    policy: pull-push
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+  - key: "$CI_COMMIT_REF_NAME-linux"
+    policy: push
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+
+.pull-cache-linux: &pull-cache-linux
+  - key: "$CI_COMMIT_REF_NAME-linux"
+    fallback_keys: [ "$CI_PROJECT_NAME-cache-linux" ]
+    policy: pull
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+
+.cache-mac: &cache-mac
+  - key: "$CI_PROJECT_NAME-cache-mac"
+    policy: pull-push
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+  - key: "$CI_COMMIT_REF_NAME-mac"
+    policy: push
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+
+.pull-cache-mac: &pull-cache-mac
+  - key: "$CI_COMMIT_REF_NAME-mac"
+    fallback_keys: [ "$CI_PROJECT_NAME-cache-mac" ]
+    policy: pull
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+
+.cache-windows: &cache-windows
+  - key: "$CI_PROJECT_NAME-cache-windows"
+    policy: pull-push
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+  - key: "$CI_COMMIT_REF_NAME-windows"
+    policy: push
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+
+.pull-cache-windows: &pull-cache-windows
+  - key: "$CI_COMMIT_REF_NAME-windows"
+    fallback_keys: [ "$CI_PROJECT_NAME-cache-windows" ]
+    policy: pull
+    paths:
+      - $GRADLE_USER_HOME
+      - $KONAN_DATA_DIR
+
+# ------------------------------ Security
+
+security:dependencies:
+  stage: security
+  interruptible: true
+  timeout: 30m
+  needs: [ ]
+  variables:
+    TRIVY_CACHE_DIR: ".trivycache/"
+  cache:
+    paths:
+      - .trivycache/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      allow_failure: true
+    - if: '$CI_COMMIT_TAG =~ /^\d+.\d+.\d+.*/'
+      allow_failure: false
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      allow_failure: false
+  artifacts:
+    when: always
+    reports:
+      dependency_scanning: report.json
+  script:
+    - trivy repo ./ --exit-code 0
+    - trivy repo ./ --exit-code 0 --format template --template "@/contrib/gitlab.tpl" --output report.json
+    - trivy repo ./ --exit-code 1 --severity CRITICAL
+  tags:
+    - linux
+
+# ------------------------------ Build
+
+build:linux:
+  stage: build
+  rules:
+    - *if-merge-request-or-main
+  cache:
+    - *cache-linux
+  before_script:
+    - export JAVA_HOME=/home/sdks/zulu-17
+  script:
+    - ./gradlew
+      clean
+      :kmbed-runtime:link{KotlinMultiplatform,LinuxX64,LinuxArm64,AndroidNativeX64,AndroidNativeArm64,AndroidNativeArm32}
+      :kmbed-gradle-plugin:jar
+  tags:
+    - linux
+
+build:windows:
+  stage: build
+  rules:
+    - *if-merge-request-or-main
+  cache:
+    - *cache-windows
+  script:
+    - ./gradlew
+      clean
+      :kmbed-runtime:linkMingwX64
+  tags:
+    - windows
+
+build:macos:
+  stage: build
+  rules:
+    - *if-merge-request-or-main
+  cache:
+    - *cache-mac
+  before_script:
+    - export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
+  script:
+    - ./gradlew
+      clean
+      :kmbed-runtime:link{MacosX64,MacosArm64,IosX64,IosArm64,IosSimulatorArm64}
+  tags:
+    - macos
+
+# ------------------------------ Publish
+
+publish:linux:
   stage: publish
+  cache:
+    - *pull-cache-linux
+  rules:
+    - *if-main
+    - *if-release
   before_script:
     - export JAVA_HOME=/home/sdks/zulu-17
   script:
@@ -17,55 +188,35 @@ publish-linux:
       clean
       :kmbed-runtime:publish{KotlinMultiplatform,LinuxX64,LinuxArm64,AndroidNativeX64,AndroidNativeArm64,AndroidNativeArm32}PublicationToGitlabRepository
       publishPluginMavenPublicationToGitlabRepository
-      --no-daemon
-      --stacktrace
-  only:
-    - master
   tags:
     - linux
 
-publish-windows:
+publish:windows:
   stage: publish
+  cache:
+    - *pull-cache-windows
+  rules:
+    - *if-main
+    - *if-release
   script:
     - ./gradlew
       clean
       :kmbed-runtime:publishMingwX64PublicationToGitlabRepository
-      --no-daemon
-      --stacktrace
-  only:
-    - master
   tags:
     - windows
 
-publish-macos:
+publish:macos:
   stage: publish
+  cache:
+    - *pull-cache-mac
+  rules:
+    - *if-main
+    - *if-release
   before_script:
     - export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
   script:
     - ./gradlew
       clean
       :kmbed-runtime:publish{MacosX64,MacosArm64,IosX64,IosArm64,IosSimulatorArm64}PublicationToGitlabRepository
-      --no-daemon
-      --stacktrace
-  only:
-    - master
   tags:
     - macos
-
-create-release:
-  stage: release
-  rules:
-    - if: $CI_COMMIT_TAG
-      when: never
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-  before_script:
-    - echo "Fetching project version from libs.versions.toml"
-    - export PROJECT_VERSION=$(./gradlew generateVersionInfo --quiet)
-  script:
-    - echo "Creating release for version $PROJECT_VERSION.$CI_PIPELINE_IID"
-  release:
-    tag_name: '$(cat .version).$CI_PIPELINE_IID'
-    description: '$(cat .version).$CI_PIPELINE_IID'
-    ref: '$CI_COMMIT_SHA'
-  tags:
-    - linux
