@@ -139,7 +139,7 @@ build:linux:
   script:
     - ./gradlew
       clean
-      :kmbed-runtime:link{KotlinMultiplatform,LinuxX64,LinuxArm64,AndroidNativeX64,AndroidNativeArm64,AndroidNativeArm32}
+      :kmbed-runtime:link{LinuxX64,LinuxArm64,AndroidNativeX64,AndroidNativeArm64,AndroidNativeArm32}
       :kmbed-gradle-plugin:jar
   tags:
     - linux
