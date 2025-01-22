@@ -76,26 +76,6 @@ variables:
       - $GRADLE_USER_HOME
       - $KONAN_DATA_DIR
 
-.cache-windows: &cache-windows
-  - key: "$CI_PROJECT_NAME-cache-windows"
-    policy: pull-push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-  - key: "$CI_COMMIT_REF_NAME-windows"
-    policy: push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-
-.pull-cache-windows: &pull-cache-windows
-  - key: "$CI_COMMIT_REF_NAME-windows"
-    fallback_keys: [ "$CI_PROJECT_NAME-cache-windows" ]
-    policy: pull
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-
 # ------------------------------ Security
 
 security:dependencies:
@@ -139,23 +119,10 @@ build:linux:
   script:
     - ./gradlew
       clean
-      :kmbed-runtime:link{LinuxX64,LinuxArm64,AndroidNativeX64,AndroidNativeArm64,AndroidNativeArm32}
+      :kmbed-runtime:link{LinuxX64,LinuxArm64,AndroidNativeX64,AndroidNativeArm64,AndroidNativeArm32,MingwX64}
       :kmbed-gradle-plugin:jar
   tags:
     - linux
-
-build:windows:
-  stage: build
-  rules:
-    - *if-merge-request-or-main
-  cache:
-    - *cache-windows
-  script:
-    - ./gradlew
-      clean
-      :kmbed-runtime:linkMingwX64
-  tags:
-    - windows
 
 build:macos:
   stage: build
@@ -186,24 +153,10 @@ publish:linux:
   script:
     - ./gradlew
       clean
-      :kmbed-runtime:publish{KotlinMultiplatform,LinuxX64,LinuxArm64,AndroidNativeX64,AndroidNativeArm64,AndroidNativeArm32}PublicationToGitlabRepository
+      :kmbed-runtime:publish{KotlinMultiplatform,LinuxX64,LinuxArm64,AndroidNativeX64,AndroidNativeArm64,AndroidNativeArm32,MingwX64}PublicationToGitlabRepository
       publishPluginMavenPublicationToGitlabRepository
   tags:
     - linux
-
-publish:windows:
-  stage: publish
-  cache:
-    - *pull-cache-windows
-  rules:
-    - *if-main
-    - *if-release
-  script:
-    - ./gradlew
-      clean
-      :kmbed-runtime:publishMingwX64PublicationToGitlabRepository
-  tags:
-    - windows
 
 publish:macos:
   stage: publish
