@@ -42,15 +42,9 @@ variables:
     paths:
       - $GRADLE_USER_HOME
       - $KONAN_DATA_DIR
-  - key: "$CI_COMMIT_REF_NAME-linux"
-    policy: push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
 
 .pull-cache-linux: &pull-cache-linux
-  - key: "$CI_COMMIT_REF_NAME-linux"
-    fallback_keys: [ "$CI_PROJECT_NAME-cache-linux" ]
+  - key: "$CI_PROJECT_NAME-cache-linux"
     policy: pull
     paths:
       - $GRADLE_USER_HOME
@@ -62,15 +56,9 @@ variables:
     paths:
       - $GRADLE_USER_HOME
       - $KONAN_DATA_DIR
-  - key: "$CI_COMMIT_REF_NAME-mac"
-    policy: push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
 
 .pull-cache-mac: &pull-cache-mac
-  - key: "$CI_COMMIT_REF_NAME-mac"
-    fallback_keys: [ "$CI_PROJECT_NAME-cache-mac" ]
+  - key: "$CI_PROJECT_NAME-cache-mac"
     policy: pull
     paths:
       - $GRADLE_USER_HOME
@@ -81,7 +69,6 @@ variables:
 security:dependencies:
   stage: security
   interruptible: true
-  timeout: 30m
   needs: [ ]
   variables:
     TRIVY_CACHE_DIR: ".trivycache/"
