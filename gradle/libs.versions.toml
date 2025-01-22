@@ -1,5 +1,5 @@
 [versions]
-kmbed = "1.4.96"
+kmbed = "1.4.97"
 
 kotlin = "2.1.0"
 kotlinxCoroutines = "1.10.1"
