@@ -19,9 +19,9 @@ kotlin {
     sourceSets {
         nativeMain {
             dependencies {
-                implementation(libs.kotlinx.io.bytestring)
-                implementation(libs.kotlinx.io.core)
-                implementation(libs.multiplatform.mman)
+                api(libs.kotlinx.io.bytestring)
+                api(libs.kotlinx.io.core)
+                api(libs.multiplatform.mman)
             }
         }
     }

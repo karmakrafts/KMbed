@@ -2,7 +2,8 @@ val baseVersion: String = libs.versions.kmbed.get()
 
 allprojects {
     group = "io.karma.kmbed"
-    version = "$baseVersion.${System.getenv("CI_PIPELINE_IID") ?: 0}"
+    val versionSuffix = System.getenv("CI_COMMIT_TAG")?.let { "" } ?: "-SNAPSHOT"
+    version = "$baseVersion.${System.getenv("CI_PIPELINE_IID") ?: 0}$versionSuffix"
 
     repositories {
         mavenLocal()
