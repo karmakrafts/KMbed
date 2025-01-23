@@ -1,3 +1,19 @@
+/*
+ * Copyright 2025 Karma Krafts & associates
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
@@ -26,7 +42,7 @@ kotlin {
 tasks {
     val createVersionFile by registering {
         doFirst {
-            val path = (layout.buildDirectory.asFile.get().toPath() / "generated" / "version")
+            val path = (layout.buildDirectory.asFile.get().toPath() / "generated" / "kmbed.version")
             path.deleteIfExists()
             path.parent.createDirectories()
             path.outputStream(StandardOpenOption.CREATE).bufferedWriter().use {
@@ -57,8 +73,8 @@ gradlePlugin {
 }
 
 publishing {
-    System.getenv("CI_API_V4_URL")?.let { apiUrl ->
-        repositories {
+    repositories {
+        System.getenv("CI_API_V4_URL")?.let { apiUrl ->
             maven {
                 url = uri("$apiUrl/projects/${System.getenv("CI_PROJECT_ID")}/packages/maven")
                 name = "GitLab"
