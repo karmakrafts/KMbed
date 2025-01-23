@@ -4,7 +4,7 @@ allprojects {
     group = "io.karma.kmbed"
     // @formatter:off
     version = System.getenv("CI_COMMIT_TAG")?.let { baseVersion }
-        ?: "$baseVersion.${System.getenv("CI_PIPELINE_IID") ?: 0}"
+        ?: "$baseVersion.${System.getenv("CI_PIPELINE_IID") ?: 0}-SNAPSHOT"
     // @formatter:on
     repositories {
         mavenLocal()
