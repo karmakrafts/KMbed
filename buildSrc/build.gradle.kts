@@ -15,20 +15,14 @@
  */
 
 plugins {
-    alias(libs.plugins.dokka) apply false
+    `kotlin-dsl`
 }
 
-group = "io.karma.kmbed"
-version = CI.getDefaultVersion(libs.versions.kmbed)
+repositories {
+    mavenCentral()
+    google()
+}
 
-allprojects {
-    group = rootProject.group
-    version = rootProject.version
-
-    repositories {
-        mavenLocal()
-        mavenCentral()
-        google()
-        packageRegistry(gitlab().project("kk/multiplatform-mman"))
-    }
+dependencies {
+    implementation("com.google.code.gson:gson:2.11.0")
 }
