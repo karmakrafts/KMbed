@@ -162,16 +162,16 @@ publish:macos:
     - macos
 
 publish:documentation:
-    stage: publish
-    before_script:
-        - export JAVA_HOME=/home/sdks/zulu-17
-    script:
-        - ./gradlew
-            -DpublishDocs.root=/var/www/docs/kmbed
-            publishDocs
-            --no-daemon
-            --stacktrace
-    only:
-        - master
-    tags:
-        - linux
+  stage: publish
+  cache:
+    - *pull-cache-linux
+  rules:
+    - *if-release
+  before_script:
+    - export JAVA_HOME=/home/sdks/zulu-17
+  script:
+    - ./gradlew
+      -DpublishDocs.root=/var/www/docs/kmbed
+      publishDocs
+  tags:
+    - linux
