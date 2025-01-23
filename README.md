@@ -7,7 +7,7 @@ The runtime provides an API similar to Android's R-class, zlib compression and [
 
 Using KMbed is as simple as applying the KMbed Gradle Plugin and the Kotlin/Native runtime.
 
-```kts
+```kotlin
 plugins {
     id("io.karma.kmbed.kmbed-gradle-plugin") version "<version>"
 }
@@ -27,7 +27,7 @@ kotlin {
 
 The following configuration properties are avaiable through the kmbed project extension:
 
-```kts
+```kotlin
 kmbed {
     // Allows changing the namespace (package name) of the generated resources for the current module
     resourceNamespace = "com.example.foo"

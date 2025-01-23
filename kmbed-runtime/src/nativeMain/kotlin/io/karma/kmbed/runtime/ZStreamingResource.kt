@@ -23,6 +23,7 @@ import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.free
+import kotlinx.cinterop.interpretCPointer
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.ptr
@@ -101,7 +102,7 @@ internal class ZStreamingSource(
             it.usePinned { pinnedBuffer ->
                 stream.apply {
                     avail_in = available.toUInt()
-                    next_in = resource.address.reinterpret()
+                    next_in = interpretCPointer(resource.address.rawValue + read)
                     avail_out = it.size.toUInt()
                     next_out = pinnedBuffer.addressOf(0).reinterpret()
                 }
