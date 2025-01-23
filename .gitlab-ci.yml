@@ -160,3 +160,18 @@ publish:macos:
       :kmbed-runtime:publish{MacosX64,MacosArm64,IosX64,IosArm64,IosSimulatorArm64}PublicationToGitlabRepository
   tags:
     - macos
+
+publish:documentation:
+    stage: publish
+    before_script:
+        - export JAVA_HOME=/home/sdks/zulu-17
+    script:
+        - ./gradlew
+            -DpublishDocs.root=/var/www/docs/kmbed
+            publishDocs
+            --no-daemon
+            --stacktrace
+    only:
+        - master
+    tags:
+        - linux

@@ -58,8 +58,8 @@ tasks {
 @Suppress("UnstableApiUsage")
 gradlePlugin {
     System.getenv("CI_PROJECT_URL")?.let {
-        website.set(it)
-        vcsUrl.set(it)
+        website = it
+        vcsUrl = it
     }
     plugins {
         create("KMbed Gradle Plugin") {

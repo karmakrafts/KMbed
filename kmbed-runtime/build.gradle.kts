@@ -1,3 +1,5 @@
+import org.jetbrains.dokka.gradle.engine.parameters.KotlinPlatform
+
 /*
  * Copyright 2025 Karma Krafts & associates
  *
@@ -44,12 +46,30 @@ kotlin {
     }
 }
 
+val dokkaJar by tasks.registering(Jar::class) {
+    dependsOn(tasks.dokkaGeneratePublicationHtml)
+    from(tasks.dokkaGeneratePublicationHtml.flatMap { it.outputDirectory })
+    archiveClassifier = "javadoc"
+}
+
+tasks {
+    System.getProperty("publishDocs.root")?.let { docsDir ->
+        register<Copy>("publishDocs") {
+            dependsOn(dokkaJar)
+            mustRunAfter(dokkaJar)
+            from(zipTree(dokkaJar.get().outputs.files.first()))
+            into(docsDir)
+        }
+    }
+}
+
 publishing {
     repositories {
         with(CI) { authenticatedPackageRegistry() }
     }
     publications.configureEach {
         if (this is MavenPublication) {
+            artifact(dokkaJar)
             pom {
                 name = project.name
                 description = "Embedded resource runtime for Kotlin/Native."
