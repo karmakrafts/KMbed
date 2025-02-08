@@ -16,14 +16,9 @@
 
 package io.karma.kmbed.runtime
 
-import io.karma.mman.MemoryRegion
-import io.karma.mman.PAGE_SIZE
-import kotlinx.cinterop.COpaquePointer
-import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.io.Buffer
 import kotlinx.io.RawSource
-import kotlinx.io.buffered
 import kotlinx.io.files.Path
-import kotlinx.io.files.SystemFileSystem
 
 /**
  * An instance of this interface represents a singular resource embedded
@@ -41,12 +36,6 @@ interface Resource {
      * True if this resource has been compressed.
      */
     val isCompressed: Boolean
-
-    /**
-     * A non-null pointer to the raw data of this resource.
-     */
-    @ExperimentalForeignApi
-    val address: COpaquePointer
 
     /**
      * The size of this resource within the executable in bytes.
@@ -75,11 +64,14 @@ interface Resource {
      *
      * @return A new source which reads from the data of this resource via its address.
      */
-    fun asSource(): RawSource
+    fun asSource(): RawSource = Buffer().apply {
+        val data = asByteArray()
+        write(data, 0, data.size - 1)
+    }
 
     /**
      * Copies (and decompresses if needed) this resource into a new file created
-     * at the specified location using MMIO.
+     * at the specified location.
      *
      * @param path The path of the new file to be created.
      * @param override If true, the file at the specified location will be
@@ -88,11 +80,7 @@ interface Resource {
      *  data into the newly created file. Change with care.
      * @return True if the resource was successfully unpacked to the specified location.
      */
-    fun unpackTo(path: Path, override: Boolean = false, bufferSize: Int = PAGE_SIZE.toInt()): Boolean {
-        if (SystemFileSystem.exists(path)) {
-            if (!override) return false
-            SystemFileSystem.delete(path)
-        }
-        return asSource().buffered().transferTo(MemoryRegion.sink(path, bufferSize)) == uncompressedSize
+    fun unpackTo(path: Path, override: Boolean = false, bufferSize: Int = 4096): Boolean {
+        return false // TODO: default implementation
     }
 }

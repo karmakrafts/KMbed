@@ -17,9 +17,7 @@
 package io.karma.kmbed.runtime
 
 import io.karma.mman.RawMemorySource
-import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.Pinned
 import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.convert
@@ -27,15 +25,14 @@ import kotlinx.cinterop.usePinned
 import kotlinx.io.RawSource
 import platform.posix.memcpy
 
-@ExperimentalForeignApi
-internal class StreamingResource(
-    override val path: String, val ref: Pinned<UByteArray>
-) : Resource, PinnedResource {
+@InternalKmbedApi
+@OptIn(ExperimentalForeignApi::class)
+class StreamingResource(
+    override val path: String, data: UByteArray
+) : NativeResource(data) {
     override val isCompressed: Boolean = false
 
-    override val address: COpaquePointer
-        get() = ref.addressOf(0)
-
+    @OptIn(InternalKmbedApi::class)
     override val size: Long
         get() = ref.get().size.toLong()
 
@@ -50,8 +47,4 @@ internal class StreamingResource(
     }
 
     override fun asSource(): RawSource = RawMemorySource(address, size)
-
-    override fun release() {
-        ref.unpin()
-    }
 }

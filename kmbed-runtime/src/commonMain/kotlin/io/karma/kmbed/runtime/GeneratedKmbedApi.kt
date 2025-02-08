@@ -16,12 +16,12 @@
 
 package io.karma.kmbed.runtime
 
-import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.Pinned
-
-@InternalKmbedApi
-interface PinnedResource {
-    @ExperimentalForeignApi
-    @InternalKmbedApi
-    val ref: Pinned<UByteArray>
-}
+/**
+ * Marks the given declaration to be used exclusively by generated
+ * (or internal) runtime code.
+ */
+@RequiresOptIn(
+    "The API you're trying to use is part of the KMbed ABI and may change at any time. Use stable APIs instead."
+)
+@Retention(AnnotationRetention.BINARY)
+annotation class GeneratedKmbedApi()

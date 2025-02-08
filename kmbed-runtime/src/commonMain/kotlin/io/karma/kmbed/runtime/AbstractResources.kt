@@ -16,32 +16,40 @@
 
 package io.karma.kmbed.runtime
 
-import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.pin
+@OptIn(ExperimentalUnsignedTypes::class)
+typealias ResourceFactory = (path: String, data: UByteArray) -> Resource
+
+@OptIn(ExperimentalUnsignedTypes::class)
+typealias CompressedResourceFactory = (path: String, data: UByteArray, uncompressedSize: Long) -> Resource
 
 /**
  * Provides an API for querying resources from a given module.
  * This is implemented by the generated code to initialize and register all
  * resources for the current module/target.
+ *
+ * @param resourceFactory The factory invoked for creating regular, uncompressed resources.
+ * @param compressedResourceFactory The factory invoked for creating compressed resources.
+ * @param cleanupCallback A callback which is invoked to clean up any resources being held onto
+ *  based on the current implementation.
  */
-@OptIn(ExperimentalForeignApi::class)
-abstract class AbstractResources {
+abstract class AbstractResources @InternalKmbedApi constructor(
+    private val resourceFactory: ResourceFactory,
+    private val compressedResourceFactory: CompressedResourceFactory,
+    private val cleanupCallback: AbstractResources.() -> Unit = {}
+) {
     internal val resources: HashMap<String, Resource> = HashMap()
 
-    @GeneratedKmbedApi
-    fun cleanup() {
-        for ((_, resource) in resources) {
-            if (resource !is PinnedResource) continue
-            resource.release()
-        }
+    protected fun cleanup() {
+        cleanupCallback()
     }
 
+    @OptIn(ExperimentalUnsignedTypes::class)
     protected fun add(path: String, ref: UByteArray, uncompressedSize: Int) {
         require(path !in resources) { "Resource $path already exists" }
-        resources[path] = if (ref.size != uncompressedSize) ZStreamingResource(
-            path, ref.pin(), uncompressedSize.toLong()
+        resources[path] = if (ref.size != uncompressedSize) compressedResourceFactory(
+            path, ref, uncompressedSize.toLong()
         )
-        else StreamingResource(path, ref.pin())
+        else resourceFactory(path, ref)
     }
 
     /**

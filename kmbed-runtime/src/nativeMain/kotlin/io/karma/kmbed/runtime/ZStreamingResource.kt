@@ -16,9 +16,7 @@
 
 package io.karma.kmbed.runtime
 
-import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.Pinned
 import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
@@ -41,15 +39,14 @@ import platform.zlib.inflateInit
 import platform.zlib.z_stream
 import kotlin.math.min
 
-@ExperimentalForeignApi
-internal class ZStreamingResource(
-    override val path: String, val ref: Pinned<UByteArray>, override val uncompressedSize: Long
-) : Resource, PinnedResource {
+@InternalKmbedApi
+@OptIn(ExperimentalForeignApi::class)
+class ZStreamingResource(
+    override val path: String, data: UByteArray, override val uncompressedSize: Long
+) : NativeResource(data) {
     override val isCompressed: Boolean = true
 
-    override val address: COpaquePointer
-        get() = ref.addressOf(0)
-
+    @OptIn(InternalKmbedApi::class)
     override val size: Long
         get() = ref.get().size.toLong()
 
@@ -76,13 +73,10 @@ internal class ZStreamingResource(
     }
 
     override fun asSource(): RawSource = ZStreamingSource(this)
-
-    override fun release() {
-        ref.unpin()
-    }
 }
 
-@ExperimentalForeignApi
+@InternalKmbedApi
+@OptIn(ExperimentalForeignApi::class)
 internal class ZStreamingSource(
     private val resource: ZStreamingResource
 ) : RawSource {

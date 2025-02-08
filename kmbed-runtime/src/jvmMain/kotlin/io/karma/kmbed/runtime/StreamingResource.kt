@@ -16,12 +16,13 @@
 
 package io.karma.kmbed.runtime
 
-import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.Pinned
-
+@OptIn(ExperimentalUnsignedTypes::class)
 @InternalKmbedApi
-interface PinnedResource {
-    @ExperimentalForeignApi
-    @InternalKmbedApi
-    val ref: Pinned<UByteArray>
+class StreamingResource(
+    override val path: String, private val data: UByteArray
+) : Resource {
+    override val isCompressed: Boolean = false
+    override val size: Long = data.size.toLong()
+
+    override fun asByteArray(): ByteArray = data.asByteArray()
 }

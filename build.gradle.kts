@@ -26,9 +26,8 @@ allprojects {
     version = rootProject.version
 
     repositories {
-        mavenLocal()
         mavenCentral()
         google()
-        packageRegistry(gitlab().project("kk/multiplatform-mman"))
+        maven("https://files.karmakrafts.dev/maven")
     }
 }

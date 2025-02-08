@@ -13,8 +13,6 @@ stages:
 
 variables:
   GRADLE_OPTS: -Dorg.gradle.daemon=false
-  GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
-  KONAN_DATA_DIR: $CI_PROJECT_DIR/.konan
 
 # ------------------------------ Conditions
 
@@ -33,36 +31,6 @@ variables:
   - if: '$CI_COMMIT_TAG =~ /^\d+.\d+.\d+.*/'
   - if: $CI_PIPELINE_SOURCE == "schedule"
     when: never
-
-# ------------------------------ Caches
-
-.cache-linux: &cache-linux
-  - key: "$CI_PROJECT_NAME-cache-linux"
-    policy: pull-push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-
-.pull-cache-linux: &pull-cache-linux
-  - key: "$CI_PROJECT_NAME-cache-linux"
-    policy: pull
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-
-.cache-mac: &cache-mac
-  - key: "$CI_PROJECT_NAME-cache-mac"
-    policy: pull-push
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
-
-.pull-cache-mac: &pull-cache-mac
-  - key: "$CI_PROJECT_NAME-cache-mac"
-    policy: pull
-    paths:
-      - $GRADLE_USER_HOME
-      - $KONAN_DATA_DIR
 
 # ------------------------------ Security
 
@@ -95,60 +63,25 @@ security:dependencies:
 
 # ------------------------------ Build
 
-build:linux:
+build:
   stage: build
   rules:
     - *if-merge-request-or-main
-  cache:
-    - *cache-linux
-  before_script:
-    - export JAVA_HOME=/home/sdks/zulu-17
-  script:
-    - ./gradlew
-      clean
-      :kmbed-runtime:link{LinuxX64,LinuxArm64,AndroidNativeX64,AndroidNativeArm64,AndroidNativeArm32,MingwX64}
-      :kmbed-gradle-plugin:jar
-  tags:
-    - linux
-
-build:macos:
-  stage: build
-  rules:
-    - *if-merge-request-or-main
-  cache:
-    - *cache-mac
   before_script:
     - export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
   script:
     - ./gradlew
       clean
-      :kmbed-runtime:link{MacosX64,MacosArm64,IosX64,IosArm64,IosSimulatorArm64}
+      :kmbed-runtime:link{MacosX64,MacosArm64,IosX64,IosArm64,IosSimulatorArm64,LinuxX64,LinuxArm64,AndroidNativeX64,AndroidNativeArm64,AndroidNativeArm32,MingwX64}
+      :kmbed-runtime:{jvm,js}Jar
+      :kmbed-gradle-plugin:jar
   tags:
     - macos
 
 # ------------------------------ Publish
 
-publish:linux:
+publish:
   stage: publish
-  cache:
-    - *pull-cache-linux
-  rules:
-    - *if-main
-    - *if-release
-  before_script:
-    - export JAVA_HOME=/home/sdks/zulu-17
-  script:
-    - ./gradlew
-      clean
-      :kmbed-runtime:publish{KotlinMultiplatform,LinuxX64,LinuxArm64,AndroidNativeX64,AndroidNativeArm64,AndroidNativeArm32,MingwX64}PublicationToGitlabRepository
-      publishPluginMavenPublicationToGitlabRepository
-  tags:
-    - linux
-
-publish:macos:
-  stage: publish
-  cache:
-    - *pull-cache-mac
   rules:
     - *if-main
     - *if-release
@@ -157,14 +90,13 @@ publish:macos:
   script:
     - ./gradlew
       clean
-      :kmbed-runtime:publish{MacosX64,MacosArm64,IosX64,IosArm64,IosSimulatorArm64}PublicationToGitlabRepository
+      :kmbed-runtime:publish{MacosX64,MacosArm64,IosX64,IosArm64,IosSimulatorArm64,KotlinMultiplatform,LinuxX64,LinuxArm64,AndroidNativeX64,AndroidNativeArm64,AndroidNativeArm32,MingwX64}PublicationToGitlabRepository
+      publishPluginMavenPublicationToGitlabRepository
   tags:
     - macos
 
 publish:documentation:
   stage: publish
-  cache:
-    - *pull-cache-linux
   rules:
     - *if-release
   before_script:

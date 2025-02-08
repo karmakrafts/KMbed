@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
+@file:JsModule("pako") @file:JsNonModule
+
 package io.karma.kmbed.runtime
 
-/**
- * Marks the given declaration to be used exclusively by generated
- * (or internal) runtime code.
- */
-@RequiresOptIn(
-    "The API you're trying to use is part of the KMbed ABI and may change at any time. Use stable APIs instead."
-)
-@Retention(AnnotationRetention.BINARY)
-annotation class GeneratedKmbedApi()
+import js.typedarrays.Uint8Array
+
+internal external object pako {
+    fun inflate(data: Uint8Array<*>): Uint8Array<*>
+}

@@ -16,12 +16,20 @@
 
 package io.karma.kmbed.runtime
 
-import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.Pinned
+import java.io.ByteArrayInputStream
+import java.util.zip.InflaterInputStream
 
+@OptIn(ExperimentalUnsignedTypes::class)
 @InternalKmbedApi
-interface PinnedResource {
-    @ExperimentalForeignApi
-    @InternalKmbedApi
-    val ref: Pinned<UByteArray>
+class ZStreamingResource(
+    override val path: String, private val data: UByteArray, override val uncompressedSize: Long
+) : Resource {
+    override val isCompressed: Boolean = true
+    override val size: Long = data.size.toLong()
+
+    override fun asByteArray(): ByteArray = ByteArrayInputStream(data.asByteArray()).use { stream ->
+        InflaterInputStream(stream).use { inflater ->
+            inflater.readAllBytes()
+        }
+    }
 }

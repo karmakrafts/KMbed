@@ -39,10 +39,13 @@ open class KmbedGradlePlugin @Inject constructor(
             }
             project.afterEvaluate {
                 kotlinExtension.targets.forEach { target ->
-                    target.compilations.filter { it.platformType == KotlinPlatformType.native }.forEach { compilation ->
+                    require(target.platformType != KotlinPlatformType.androidJvm) {
+                        "Android targets are not supported by KMbed right now"
+                    }
+                    target.compilations.forEach { compilation ->
                         // Register all required generation tasks for this compilation
-                        val resourceSet = compilation.allKotlinSourceSets.flatMap { it.resources.srcDirs }
-                            .filter { it.exists() }
+                        val resourceSet =
+                            compilation.allKotlinSourceSets.flatMap { it.resources.srcDirs }.filter { it.exists() }
                         val compName = "${compilation.target.name}${compilation.name.capitalized()}"
                         val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / compName
                         outputDir.createDirectories()
@@ -51,6 +54,7 @@ open class KmbedGradlePlugin @Inject constructor(
                             taskName, KmbedGenerateSourcesTask::class.java
                         ) { task ->
                             task.group = "kmbed"
+                            task.platformType = target.platformType
                             task.resourceDirectories.setFrom(*resourceSet.toTypedArray())
                             task.sourceDirectory.set(outputDir.toFile())
                         }.get()
@@ -61,8 +65,8 @@ open class KmbedGradlePlugin @Inject constructor(
                             mustRunAfter(generateTask)
                             // We depend on either source set, defaulting to main instead of test
                             // TODO: find a more robust solution to this
-                            val commonName = if ("test" in name.lowercase()) "generateNativeTestKmbedSources"
-                            else "generateNativeMainKmbedSources"
+                            val commonName = if ("test" in name.lowercase()) "generateCommonTestKmbedSources"
+                            else "generateCommonMainKmbedSources"
                             dependsOn(commonName)
                             mustRunAfter(commonName)
                         }
@@ -77,26 +81,26 @@ open class KmbedGradlePlugin @Inject constructor(
                     }
                 }
                 // TODO: make this configurable through project extension eventually
-                val generateNativeMainKmbedSources = project.tasks.register(
-                    "generateNativeMainKmbedSources", KmbedGenerateCommonSourcesTask::class.java
+                val generateCommonMainKmbedSources = project.tasks.register(
+                    "generateCommonMainKmbedSources", KmbedGenerateCommonSourcesTask::class.java
                 ) { task ->
                     task.group = "kmbed"
-                    val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / "nativeMain"
+                    val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / "commonMain"
                     task.sourceDirectory.set(outputDir.toFile())
                 }.get()
-                kotlinExtension.sourceSets.getByName("nativeMain").kotlin.srcDir(
-                    generateNativeMainKmbedSources.sourceDirectory.asFile
+                kotlinExtension.sourceSets.getByName("commonMain").kotlin.srcDir(
+                    generateCommonMainKmbedSources.sourceDirectory.asFile
                 )
 
-                val generateNativeTestKmbedSources = project.tasks.register(
-                    "generateNativeTestKmbedSources", KmbedGenerateCommonSourcesTask::class.java
+                val generateCommonTestKmbedSources = project.tasks.register(
+                    "generateCommonTestKmbedSources", KmbedGenerateCommonSourcesTask::class.java
                 ) { task ->
                     task.group = "kmbed"
-                    val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / "nativeTest"
+                    val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / "commonTest"
                     task.sourceDirectory.set(outputDir.toFile())
                 }.get()
-                kotlinExtension.sourceSets.getByName("nativeTest").kotlin.srcDir(
-                    generateNativeTestKmbedSources.sourceDirectory.asFile
+                kotlinExtension.sourceSets.getByName("commonTest").kotlin.srcDir(
+                    generateCommonTestKmbedSources.sourceDirectory.asFile
                 )
             }
         }

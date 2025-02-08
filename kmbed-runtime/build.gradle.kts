@@ -1,4 +1,5 @@
-import org.jetbrains.dokka.gradle.engine.parameters.KotlinPlatform
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 
 /*
  * Copyright 2025 Karma Krafts & associates
@@ -22,7 +23,25 @@ plugins {
     `maven-publish`
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
 kotlin {
+    jvmToolchain(java.toolchain.languageVersion.get().asInt())
+    jvm {
+        compilations.all {
+            compileTaskProvider {
+                compilerOptions {
+                    jvmTarget = JvmTarget.JVM_17
+                }
+            }
+        }
+    }
     mingwX64()
     linuxX64()
     linuxArm64()
@@ -34,14 +53,50 @@ kotlin {
     iosX64()
     iosArm64()
     iosSimulatorArm64()
+    js {
+        browser()
+    }
     applyDefaultHierarchyTemplate()
     sourceSets {
-        nativeMain {
+        commonMain {
             dependencies {
                 api(libs.kotlinx.io.bytestring)
                 api(libs.kotlinx.io.core)
-                api(libs.multiplatform.mman)
             }
+        }
+        nativeMain {
+            dependencies {
+                implementation(libs.multiplatform.mman)
+            }
+        }
+        jsMain {
+            dependencies {
+                implementation(libs.kotlin.wrappers)
+                implementation(npm("pako", libs.versions.pako.get()))
+            }
+        }
+    }
+}
+
+dokka {
+    moduleName = project.name
+    dokkaSourceSets {
+        val commonMain by creating {
+            sourceRoots.from(kotlin.sourceSets.getByName("commonMain").kotlin.srcDirs)
+        }
+        val nativeMain by creating {
+            sourceRoots.from(kotlin.sourceSets.getByName("nativeMain").kotlin.srcDirs)
+        }
+        val jvmMain by creating {
+            sourceRoots.from(kotlin.sourceSets.getByName("jvmMain").kotlin.srcDirs)
+        }
+        val jsMain by creating {
+            sourceRoots.from(kotlin.sourceSets.getByName("jsMain").kotlin.srcDirs)
+        }
+    }
+    pluginsConfiguration {
+        html {
+            footerMessage = "(c) 2025 Karma Krafts & associates"
         }
     }
 }
@@ -49,12 +104,12 @@ kotlin {
 val dokkaJar by tasks.registering(Jar::class) {
     dependsOn(tasks.dokkaGeneratePublicationHtml)
     from(tasks.dokkaGeneratePublicationHtml.flatMap { it.outputDirectory })
-    archiveClassifier = "javadoc"
+    archiveClassifier.set("javadoc")
 }
 
 tasks {
     System.getProperty("publishDocs.root")?.let { docsDir ->
-        register<Copy>("publishDocs") {
+        register("publishDocs", Copy::class) {
             dependsOn(dokkaJar)
             mustRunAfter(dokkaJar)
             from(zipTree(dokkaJar.get().outputs.files.first()))
