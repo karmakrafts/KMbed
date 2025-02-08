@@ -1,11 +1,24 @@
 # KMbed
 
-KMbed is a Gradle/KMP plugin for embedding resources in Kotlin/Native executables.  
+KMbed is a Gradle/KMP plugin for embedding resources in KMP modules.  
 The runtime provides an API similar to Android's R-class, zlib compression and [kotlinx.io](https://github.com/Kotlin/kotlinx-io) integration.
+
+### Multiplatform support
+
+The following KMP targets are currently supported:
+* JVM
+* JS
+* Windows x64
+* Linux x64
+* Linux arm64
+* macOS x64
+* macOS arm64
+* iOS x64
+* iOS arm64
 
 ### How to use it
 
-Using KMbed is as simple as applying the KMbed Gradle Plugin and the Kotlin/Native runtime.
+Using KMbed is as simple as applying the KMbed Gradle Plugin and the runtime.
 
 ```kotlin
 plugins {
@@ -14,7 +27,7 @@ plugins {
 
 kotlin {
     sourceSets {
-        nativeMain {
+        commonMain {
             dependencies {
                 implementation("io.karma.kmbed:kmbed-runtime:<version>")
             }
