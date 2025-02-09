@@ -16,10 +16,12 @@
 
 package io.karma.kmbed.runtime
 
-@OptIn(ExperimentalUnsignedTypes::class)
-@InternalKmbedApi
-class StreamingResource(
-    override val path: String, private val data: UByteArray
-) : DelegatingResource(path) {
-    override val isCompressed: Boolean = false
+abstract class DelegatingResource internal constructor(
+    override val path: String
+) : Resource {
+    override val size: Long = asByteArray().size.toLong()
+
+    override fun asByteArray(): ByteArray {
+        return this::class.java.getResourceAsStream(path)?.readAllBytes() ?: ByteArray(0)
+    }
 }

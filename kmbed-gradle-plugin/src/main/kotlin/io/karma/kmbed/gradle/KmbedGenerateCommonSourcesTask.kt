@@ -17,9 +17,7 @@
 package io.karma.kmbed.gradle
 
 import org.gradle.api.DefaultTask
-import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import kotlin.io.path.createDirectories
@@ -28,9 +26,6 @@ import kotlin.io.path.div
 import kotlin.io.path.writeText
 
 abstract class KmbedGenerateCommonSourcesTask : DefaultTask() {
-    @get:InputFiles
-    abstract val resourceDirectories: ConfigurableFileCollection
-
     @get:OutputDirectory
     abstract val sourceDirectory: DirectoryProperty
 

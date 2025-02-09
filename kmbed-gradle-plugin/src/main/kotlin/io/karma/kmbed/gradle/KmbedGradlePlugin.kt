@@ -21,6 +21,7 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.internal.extensions.stdlib.capitalized
+import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
 import javax.inject.Inject
 import kotlin.io.path.createDirectories
 import kotlin.io.path.div
@@ -59,11 +60,10 @@ open class KmbedGradlePlugin @Inject constructor(
                         dependsOn(generateTask)
                         mustRunAfter(generateTask)
                         // We depend on either source set, defaulting to main instead of test
-                        // TODO: find a more robust solution to this
-                        //val commonName = if ("test" in name.lowercase()) "generateCommonTestKmbedSources"
-                        //else "generateCommonMainKmbedSources"
-                        //dependsOn(commonName)
-                        //mustRunAfter(commonName)
+                        val commonName = if ("test" in name.lowercase()) "generateCommonTestKmbedSources"
+                        else "generateCommonMainKmbedSources"
+                        dependsOn(commonName)
+                        mustRunAfter(commonName)
                     }
                     project.tasks.getByName(compilation.compileKotlinTaskName) { task ->
                         task.dependsOnGeneration()
@@ -74,28 +74,27 @@ open class KmbedGradlePlugin @Inject constructor(
                     // Inject generated sources into default source set of current compilation
                     compilation.defaultSourceSet.kotlin.srcDir(outputDir.toFile())
                 }
-                // TODO: make this configurable through project extension eventually
-                //val generateCommonMainKmbedSources = project.tasks.register(
-                //    "generateCommonMainKmbedSources", KmbedGenerateCommonSourcesTask::class.java
-                //) { task ->
-                //    task.group = "kmbed"
-                //    val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / "commonMain"
-                //    task.sourceDirectory.set(outputDir.toFile())
-                //}.get()
-                //kotlinExtension.sourceSets.getByName("commonMain").kotlin.srcDir(
-                //    generateCommonMainKmbedSources.sourceDirectory.asFile
-                //)
-//
-                //val generateCommonTestKmbedSources = project.tasks.register(
-                //    "generateCommonTestKmbedSources", KmbedGenerateCommonSourcesTask::class.java
-                //) { task ->
-                //    task.group = "kmbed"
-                //    val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / "commonTest"
-                //    task.sourceDirectory.set(outputDir.toFile())
-                //}.get()
-                //kotlinExtension.sourceSets.getByName("commonTest").kotlin.srcDir(
-                //    generateCommonTestKmbedSources.sourceDirectory.asFile
-                //)
+                val generateCommonMainKmbedSources = project.tasks.register(
+                    "generateCommonMainKmbedSources", KmbedGenerateCommonSourcesTask::class.java
+                ) { task ->
+                    task.group = "kmbed"
+                    val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / "commonMain"
+                    task.sourceDirectory.set(outputDir.toFile())
+                }.get()
+                project.kotlinExtension.sourceSets.getByName("commonMain").kotlin.srcDir(
+                    generateCommonMainKmbedSources.sourceDirectory.asFile
+                )
+
+                val generateCommonTestKmbedSources = project.tasks.register(
+                    "generateCommonTestKmbedSources", KmbedGenerateCommonSourcesTask::class.java
+                ) { task ->
+                    task.group = "kmbed"
+                    val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / "commonTest"
+                    task.sourceDirectory.set(outputDir.toFile())
+                }.get()
+                project.kotlinExtension.sourceSets.getByName("commonTest").kotlin.srcDir(
+                    generateCommonTestKmbedSources.sourceDirectory.asFile
+                )
             }
         }
     }

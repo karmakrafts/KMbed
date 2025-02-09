@@ -56,6 +56,13 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
 
     private val extension = project.extensions.getByType(KmbedProjectExtension::class.java)
 
+    private val needsEmbedding: Boolean by lazy {
+        when (platformType) {
+            KotlinPlatformType.jvm, KotlinPlatformType.androidJvm -> false
+            else -> true
+        }
+    }
+
     @OptIn(ExperimentalPathApi::class)
     @TaskAction
     fun invoke() {
@@ -64,7 +71,8 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
             val resourceRoot = resourceDir.toPath()
             logger.info("Processing resources in $resourceRoot")
             for (path in resourceRoot.walk()) {
-                generateSources(path, resourceRoot, resources)
+                if (needsEmbedding) generateSources(path, resourceRoot, resources)
+                else findSources(path, resourceRoot, resources)
             }
         }
         generateIndexSources(resources)
@@ -124,10 +132,12 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
                 line("""import kotlinx.cinterop.staticCFunction""")
                 line("""import platform.posix.atexit""")
             }
+
             KotlinPlatformType.jvm -> {
                 line("""import java.lang.Runtime""")
                 line("""import java.lang.Thread""")
             }
+
             else -> {}
         }
     }
@@ -176,7 +186,8 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
             pushIndent()
             for ((path, resourceInfo) in resources) {
                 val (_, fqn, _, uncompressedSize) = resourceInfo
-                line("""add("$path", $fqn, $uncompressedSize)""")
+                if (needsEmbedding) line("""add("$path", $fqn, $uncompressedSize)""")
+                else line("""add("$path", "", 0)""")
             }
             line("""// @formatter:off""")
             indexCleanup()
@@ -200,6 +211,16 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
         sourcePath.outputStream(StandardOpenOption.CREATE).bufferedWriter().use {
             it.write(source.render())
             it.flush()
+        }
+    }
+
+    private fun findSources(resourcePath: Path, resourceRoot: Path, resources: HashMap<Path, ResourceInfo>) {
+        val relativePath = resourcePath.relativeTo(resourceRoot)
+        relativePath.apply {
+            require(this !in resources) { "Resource $resourcePath already exists" }
+            resources[this] = ResourceInfo(
+                relativePath.toString().replace(fieldNameReplacePattern, "_"), "", 0, 0
+            )
         }
     }
 
