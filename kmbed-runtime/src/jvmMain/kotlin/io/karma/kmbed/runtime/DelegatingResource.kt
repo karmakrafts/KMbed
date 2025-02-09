@@ -22,6 +22,6 @@ abstract class DelegatingResource internal constructor(
     override val size: Long = asByteArray().size.toLong()
 
     override fun asByteArray(): ByteArray {
-        return this::class.java.getResourceAsStream(path)?.readAllBytes() ?: ByteArray(0)
+        return this::class.java.getResourceAsStream("/$path")?.readAllBytes() ?: ByteArray(0)
     }
 }
