@@ -27,6 +27,7 @@ allprojects {
 
     repositories {
         mavenCentral()
+        mavenLocal()
         google()
         maven("https://files.karmakrafts.dev/maven")
     }

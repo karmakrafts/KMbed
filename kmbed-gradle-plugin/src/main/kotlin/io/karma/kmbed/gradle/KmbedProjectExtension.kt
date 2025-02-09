@@ -16,11 +16,19 @@
 
 package io.karma.kmbed.gradle
 
-open class KmbedProjectExtension(
+import org.gradle.api.NamedDomainObjectContainer
+import org.gradle.api.Project
+import org.gradle.api.model.ObjectFactory
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
+import javax.inject.Inject
+
+open class KmbedProjectExtension @Inject constructor( // @formatter:off
+    objects: ObjectFactory,
     defaultGroup: String
-) {
+) { // @formatter:on
     /**
-     * May be used to force-disable resource compression for all resources in this project.
+     * May be used to override the default resource compression for all resources in this project.
      */
     var compression: Boolean = true
 
@@ -32,7 +40,38 @@ open class KmbedProjectExtension(
     var compressionThreshold: Int = 256
 
     /**
-     * Allows adjusting the per-module namespace used for generated resources.
+     * Allows adjusting the default per-module namespace used for generated resources.
      */
     var resourceNamespace: String = defaultGroup
+
+    val kmbedSourceSets: NamedDomainObjectContainer<KmbedSourceSet> =
+        objects.domainObjectContainer(KmbedSourceSet::class.java)
+
+    /**
+     * Configure single KMbed source sets or add custom ones using the NamedDomainObjectContainer DSL.
+     *
+     * @param action The closure to configure and create KMbed source sets.
+     */
+    inline fun kmbedSourceSets(action: NamedDomainObjectContainer<KmbedSourceSet>.() -> Unit) {
+        kmbedSourceSets.action()
+    }
+}
+
+val Project.kmbedExtension: KmbedProjectExtension
+    get() = requireNotNull(extensions.findByType(KmbedProjectExtension::class.java)) {
+        "Could not find KMbed project extension in $name"
+    }
+
+fun NamedDomainObjectContainer<KmbedSourceSet>.defaultSourceSets(project: Project) {
+    val extension = project.kmbedExtension
+    requireNotNull(project.kotlinExtension as? KotlinMultiplatformExtension) {
+        "Default source sets requires Kotlin Multiplatform extension to be present"
+    }.targets.flatMap { it.compilations }.forEach { compilation ->
+        create(compilation.name) {
+            it.compilation = compilation
+            it.compression = extension.compression
+            it.compressionThreshold = extension.compressionThreshold
+            it.resourceNamespace = extension.resourceNamespace
+        }
+    }
 }
