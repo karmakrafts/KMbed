@@ -15,8 +15,19 @@ The following KMP targets are currently supported:
 * macOS arm64
 * iOS x64
 * iOS arm64
+* Android Native x64
+* Android Native arm64
+* Android Native arm32
 
 ### How to use it
+
+First, add the required maven repository:
+
+```kotlin
+repositories {
+    maven("https://files.karmakrafts.dev/maven")
+}
+```
 
 Using KMbed is as simple as applying the KMbed Gradle Plugin and the runtime.
 
@@ -45,8 +56,16 @@ kmbed {
     // Allows changing the namespace (package name) of the generated resources for the current module
     resourceNamespace = "com.example.foo"
     // Allows force-disabling resource compression in the resource compiler
-    compression = false
+    compression = true
     // Allows adjusting the threshold at which resources are compressed (in bytes)
     compressionThreshold = 256
+    // Custom source sets
+    kmbedSourceSets {
+        defaultSourceSets(project)
+        val customSourceSet by creating {
+            resourceNamespace = "com.example.foo.bar"
+            compression = false
+        }
+    }
 }
 ```
