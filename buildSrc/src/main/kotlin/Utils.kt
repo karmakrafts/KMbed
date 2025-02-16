@@ -31,7 +31,7 @@ import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.credentials
 import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.maven
-import org.gradle.kotlin.dsl.register
+import org.gradle.kotlin.dsl.maybeCreate
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URI
@@ -74,19 +74,22 @@ operator fun DirectoryProperty.div(other: Path): Path = getPath() / other
 fun TaskContainer.ensureBuildDirectory(): Task {
     // Lazily registers this task when called and not present
     return if (any { it.name == "ensureBuildDirectory" }) this["ensureBuildDirectory"]
-    else register("ensureBuildDirectory") {
+    else maybeCreate("ensureBuildDirectory").apply {
         val path = project.layout.buildDirectory.get().asFile.toPath()
         doLast { path.createDirectories() }
         onlyIf { path.notExists() }
-    }.get()
+    }
 }
 
 // Static CI helpers
 
 object CI {
     fun getDefaultVersion(baseVersion: Provider<String>): String {
-        return System.getenv("CI_COMMIT_TAG")?.let { baseVersion.get() }
-            ?: "${baseVersion.get()}.${System.getenv("CI_PIPELINE_IID") ?: 0}-SNAPSHOT"
+        return System.getenv("CI_COMMIT_TAG")?.let { baseVersion.get() } ?: "${baseVersion.get()}.${
+            System.getenv(
+                "CI_PIPELINE_IID"
+            ) ?: 0
+        }-SNAPSHOT"
     }
 
     fun RepositoryHandler.authenticatedPackageRegistry() {
@@ -132,19 +135,17 @@ class GitLabServer(
 class GitLabProject(
     val server: GitLabServer, val endpoint: String, val name: String, givenId: Long?
 ) {
-    val projectInfo: JsonObject by lazy {
-        with(URI.create(endpoint).toURL().openConnection() as HttpURLConnection) {
-            setDefaultUserAgent()
-            requestMethod = "GET"
-            inputStream.bufferedReader().use {
-                gson.fromJson(it, JsonObject::class.java)
-            }
+    val projectInfo: JsonObject = with(URI.create(endpoint).toURL().openConnection() as HttpURLConnection) {
+        setDefaultUserAgent()
+        requestMethod = "GET"
+        inputStream.bufferedReader().use {
+            gson.fromJson(it, JsonObject::class.java)
         }
     }
 
-    val id: Long by lazy { givenId ?: projectInfo["id"].asLong }
-    val endpointWithId: String by lazy { "${server.apiUrl}/projects/$id" }
-    val packageRegistry: GitLabPackageRegistry by lazy { GitLabPackageRegistry(this, "$endpointWithId/packages") }
+    val id: Long = givenId ?: projectInfo["id"].asLong
+    val endpointWithId: String = "${server.apiUrl}/projects/$id"
+    val packageRegistry: GitLabPackageRegistry = GitLabPackageRegistry(this, "$endpointWithId/packages")
 }
 
 class GitLabPackageRegistry(
@@ -225,8 +226,8 @@ class GitLabPackageArtifact(
         else localDirectoryPath / suffix
     }
 
-    val downloadTask: Task by lazy {
-        project.tasks.register("download${projectName.capitalized()}${suffix.capitalized()}") {
+    val downloadTask: Task = project.tasks.maybeCreate("download${projectName.capitalized()}${suffix.capitalized()}")
+        .apply {
             group = projectName
             doLast {
                 val url = "$packageUrl/$fileName"
@@ -240,27 +241,24 @@ class GitLabPackageArtifact(
                 println("Downloaded $localPath")
             }
             onlyIf { !localPath.exists() }
-        }.get()
+        }
+
+    val extractTask: Copy = project.tasks.maybeCreate(
+        "extract${projectName.capitalized()}${suffix.capitalized()}", Copy::class
+    ).apply {
+        group = projectName
+        dependsOn(downloadTask)
+        mustRunAfter(downloadTask)
+        from(project.zipTree(localPath.toFile()))
+        into(outputDirectoryPath.toFile())
+        doLast { println("Extracted $localPath") }
     }
 
-    val extractTask: Copy by lazy {
-        project.tasks.register<Copy>("extract${projectName.capitalized()}${suffix.capitalized()}") {
-            group = projectName
-            dependsOn(downloadTask)
-            mustRunAfter(downloadTask)
-            from(project.zipTree(localPath.toFile()))
-            into(outputDirectoryPath.toFile())
-            doLast { println("Extracted $localPath") }
-        }.get()
-    }
-
-    val cleanTask: Task by lazy {
-        project.tasks.register("clean${projectName.capitalized()}${suffix.capitalized()}") {
-            doLast {
-                localPath.deleteIfExists()
-                println("Removed $localPath")
-            }
-        }.get()
+    val cleanTask: Task = project.tasks.maybeCreate("clean${projectName.capitalized()}${suffix.capitalized()}").apply {
+        doLast {
+            localPath.deleteIfExists()
+            println("Removed $localPath")
+        }
     }
 }
 
@@ -275,29 +273,25 @@ fun Project.gitlab(
 class GitRepository(
     val project: Project, val name: String, val address: String, val tag: String?, val group: String
 ) {
-    val localPath: Path by lazy { project.layout.buildDirectory / name }
+    val localPath: Path = project.layout.buildDirectory / name
 
-    val cloneTask: Exec by lazy {
-        project.tasks.register<Exec>("clone${name.replace("-", "").capitalized()}") {
-            group = this@GitRepository.group
-            dependsOn(project.tasks.ensureBuildDirectory())
-            workingDir = project.layout.buildDirectory.getFile()
-            if (tag != null) commandLine(
-                "git", "clone", "--branch", tag, "--single-branch", address, this@GitRepository.name
-            )
-            else commandLine("git", "clone", address, this@GitRepository.name)
-            onlyIf { localPath.notExists() }
-        }.get()
+    val cloneTask: Exec = project.tasks.maybeCreate("clone${name.replace("-", "").capitalized()}", Exec::class).apply {
+        group = this@GitRepository.group
+        dependsOn(project.tasks.ensureBuildDirectory())
+        workingDir = project.layout.buildDirectory.getFile()
+        if (tag != null) commandLine(
+            "git", "clone", "--branch", tag, "--single-branch", address, this@GitRepository.name
+        )
+        else commandLine("git", "clone", address, this@GitRepository.name)
+        onlyIf { localPath.notExists() }
     }
 
-    val pullTask: Exec by lazy {
-        project.tasks.register<Exec>("pull${name.replace("-", "").capitalized()}") {
-            group = this@GitRepository.group
-            dependsOn(cloneTask)
-            workingDir = localPath.toFile()
-            commandLine("git", "pull", "--force")
-            onlyIf { localPath.exists() }
-        }.get()
+    val pullTask: Exec = project.tasks.maybeCreate("pull${name.replace("-", "").capitalized()}", Exec::class).apply {
+        group = this@GitRepository.group
+        dependsOn(cloneTask)
+        workingDir = localPath.toFile()
+        commandLine("git", "pull", "--force")
+        onlyIf { localPath.exists() }
     }
 }
 
