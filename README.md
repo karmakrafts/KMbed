@@ -5,9 +5,8 @@
 KMbed is a Gradle/KMP plugin for embedding resources in KMP modules.  
 The runtime provides an API similar to Android's R-class, zlib compression and [kotlinx.io](https://github.com/Kotlin/kotlinx-io) integration.
 
-### Multiplatform support
+### Platform support
 
-The following KMP targets are currently supported:
 * Windows x64
 * Linux x64
 * Linux arm64
@@ -46,6 +45,17 @@ kotlin {
             }
         }
     }
+}
+```
+
+Resource may be accessed from any source set using the `Res` global:
+
+```kotlin
+import com.example.foo.Res // Generated resource index
+
+fun main(args: Array<String>) {
+    val data = Res["my_resource.bin"].asByteArray()
+    // ...
 }
 ```
 
