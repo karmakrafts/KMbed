@@ -21,7 +21,6 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.internal.extensions.stdlib.capitalized
-import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
 import javax.inject.Inject
 import kotlin.io.path.createDirectories
 import kotlin.io.path.div
@@ -30,72 +29,93 @@ open class KmbedGradlePlugin @Inject constructor(
     private val providers: ProviderFactory
 ) : Plugin<Project> {
     override fun apply(project: Project) {
+        val logger = project.logger
+        logger.lifecycle(
+            """
+                
+            8  dP 8b   d8 8             8
+            8wdP  8YbmdP8 88b. .d88b .d88  Resource Compiler
+            88Yb  8  "  8 8  8 8.dP' 8  8  Version ${BuildInfo.VERSION}
+            8  Yb 8     8 88P' `Y88P `Y88
+        """.trimIndent()
+        )
+
         project.pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
-            val extension = project.extensions.create(
-                "kmbed", KmbedProjectExtension::class.java, project.group.toString()
-            )
+            val groupName = project.group.toString()
+            val extension = project.extensions.create("kmbed", KmbedProjectExtension::class.java, groupName)
             project.extensions.add("kmbedSourceSets", extension.kmbedSourceSets)
             project.afterEvaluate {
                 // Add all defined source sets
                 extension.kmbedSourceSets.forEach { sourceSet ->
-                    val compilation = sourceSet.compilation
-                    // Register all required generation tasks for this compilation
-                    val resourceSet =
-                        compilation.allKotlinSourceSets.flatMap { it.resources.srcDirs }.filter { it.exists() }
-                    val compName = "${compilation.target.name}${compilation.name.capitalized()}"
-                    val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / compName
-                    outputDir.createDirectories()
-                    val taskName = "generate${compName.capitalized()}KmbedSources"
-                    val generateTask = project.tasks.register(
-                        taskName, KmbedGenerateSourcesTask::class.java
-                    ) { task ->
-                        task.group = "kmbed"
-                        task.platformType = compilation.platformType
-                        task.resourceDirectories.setFrom(*resourceSet.toTypedArray())
-                        task.sourceDirectory.set(outputDir.toFile())
-                    }.get()
-
-                    // Add dependency from compile task so sources get automatically regenerated on every build
-                    fun Task.dependsOnGeneration() {
-                        dependsOn(generateTask)
-                        mustRunAfter(generateTask)
-                        // We depend on either source set, defaulting to main instead of test
-                        val commonName = if ("test" in name.lowercase()) "generateCommonTestKmbedSources"
-                        else "generateCommonMainKmbedSources"
-                        dependsOn(commonName)
-                        mustRunAfter(commonName)
-                    }
-                    project.tasks.getByName(compilation.compileKotlinTaskName) { task ->
-                        task.dependsOnGeneration()
-                    }
-                    project.tasks.getByName("commonizeNativeDistribution") { task ->
-                        task.dependsOnGeneration()
-                    }
-                    // Inject generated sources into default source set of current compilation
-                    compilation.defaultSourceSet.kotlin.srcDir(outputDir.toFile())
+                    sourceSet.registerGenerationTask(project)
                 }
-                val generateCommonMainKmbedSources = project.tasks.register(
-                    "generateCommonMainKmbedSources", KmbedGenerateCommonSourcesTask::class.java
-                ) { task ->
-                    task.group = "kmbed"
-                    val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / "commonMain"
-                    task.sourceDirectory.set(outputDir.toFile())
-                }.get()
-                project.kotlinExtension.sourceSets.getByName("commonMain").kotlin.srcDir(
-                    generateCommonMainKmbedSources.sourceDirectory.asFile
-                )
-
-                val generateCommonTestKmbedSources = project.tasks.register(
-                    "generateCommonTestKmbedSources", KmbedGenerateCommonSourcesTask::class.java
-                ) { task ->
-                    task.group = "kmbed"
-                    val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / "commonTest"
-                    task.sourceDirectory.set(outputDir.toFile())
-                }.get()
-                project.kotlinExtension.sourceSets.getByName("commonTest").kotlin.srcDir(
-                    generateCommonTestKmbedSources.sourceDirectory.asFile
-                )
+                registerCommonGenerationTasks(project)
             }
         }
+    }
+
+    private fun registerCommonGenerationTasks(project: Project) {
+        val generateCommonMainKmbedSources = project.tasks.register(
+            "generateCommonMainKmbedSources", KmbedGenerateCommonSourcesTask::class.java
+        ).get().apply {
+            group = "kmbed"
+            val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / "commonMain"
+            sourceDirectory.set(outputDir.toFile())
+        }
+        project.kotlinMultiplatformExtension.sourceSets.getByName("commonMain").kotlin.srcDir(
+            generateCommonMainKmbedSources.sourceDirectory.asFile
+        )
+
+        val generateCommonTestKmbedSources = project.tasks.register(
+            "generateCommonTestKmbedSources", KmbedGenerateCommonSourcesTask::class.java
+        ).get().apply {
+            group = "kmbed"
+            val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / "commonTest"
+            sourceDirectory.set(outputDir.toFile())
+        }
+        project.kotlinMultiplatformExtension.sourceSets.getByName("commonTest").kotlin.srcDir(
+            generateCommonTestKmbedSources.sourceDirectory.asFile
+        )
+    }
+
+    private fun KmbedSourceSet.registerGenerationTask(project: Project) {
+        // Register all required generation tasks for this compilation
+        val resourceSet = compilation.allKotlinSourceSets.flatMap { it.resources.srcDirs }.filter { it.exists() }
+        val compName = "${compilation.target.name}${compilation.name.capitalized()}"
+        val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / compName
+        outputDir.createDirectories()
+        val taskName = "generate${compName.capitalized()}KmbedSources"
+
+        val generateTask = project.tasks.register(
+            taskName, KmbedGenerateSourcesTask::class.java
+        ).get().apply {
+            group = "kmbed"
+            platformType = compilation.platformType
+            resourceDirectories.setFrom(*resourceSet.toTypedArray())
+            sourceDirectory.set(outputDir.toFile())
+        }
+
+        // Add dependency from compile task so sources get automatically regenerated on every build
+        fun Task.dependsOnGeneration() {
+            dependsOn(generateTask)
+            mustRunAfter(generateTask)
+            // We depend on either source set, defaulting to main instead of test
+            val commonName = if ("test" in name.lowercase()) "generateCommonTestKmbedSources"
+            else "generateCommonMainKmbedSources"
+            dependsOn(commonName)
+            mustRunAfter(commonName)
+        }
+
+        project.tasks.getByName("${compilation.target.name}SourcesJar") { task ->
+            task.dependsOnGeneration()
+        }
+        project.tasks.getByName(compilation.compileKotlinTaskName) { task ->
+            task.dependsOnGeneration()
+        }
+        project.tasks.getByName("commonize") { task ->
+            task.dependsOnGeneration()
+        }
+        // Inject generated sources into default source set of current compilation
+        compilation.defaultSourceSet.kotlin.srcDir(outputDir.toFile())
     }
 }

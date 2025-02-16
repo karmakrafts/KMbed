@@ -25,8 +25,7 @@ internal object BuildInfo {
             BuildInfo::class.java.getResourceAsStream("/kmbed.version")?.bufferedReader().use {
                 it?.readText()
             }!!
-        }
-        catch (_: Throwable) {
+        } catch (_: Throwable) {
             "0.0.0.0" // Just let the error propagate like this
         }
     }

@@ -69,7 +69,7 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
         val resources = HashMap<Path, ResourceInfo>()
         for (resourceDir in resourceDirectories) {
             val resourceRoot = resourceDir.toPath()
-            logger.info("Processing resources in $resourceRoot")
+            logger.lifecycle("Processing resources in $resourceRoot")
             for (path in resourceRoot.walk()) {
                 if (needsEmbedding) generateSources(path, resourceRoot, resources)
                 else findSources(path, resourceRoot, resources)
@@ -79,12 +79,11 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
     }
 
     private fun getGlobalData(path: Path): Pair<ByteArray, Int> {
+        val data = path.readBytes()
+        logger.lifecycle("Read uncompressed resource $path with ${data.size} bytes")
         if (!extension.compression || path.fileSize() < extension.compressionThreshold) {
-            val data = path.readBytes()
-            logger.info("Using uncompressed resource $path with ${data.size} bytes")
             return Pair(data, data.size)
         }
-        val data = path.readBytes()
         return ByteArrayOutputStream().use { bos ->
             DeflaterOutputStream(bos).use { dos ->
                 dos.write(data)
@@ -93,7 +92,7 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
             val size = data.size
             val compressedSize = compressedData.size
             val percentage = ((size.toDouble() - compressedSize.toDouble()) / size.toDouble()) * 100.0
-            logger.info("Compressed resource $path from $size to $compressedSize bytes ($percentage%)")
+            logger.lifecycle("Compressed resource $path from $size to $compressedSize bytes ($percentage%)")
             Pair(compressedData, size)
         }
     }
@@ -126,10 +125,13 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
         line("""import io.karma.kmbed.runtime.AbstractResources""")
         line("""import io.karma.kmbed.runtime.GeneratedKmbedApi""")
         line("""import io.karma.kmbed.runtime.InternalKmbedApi""")
+        line("""import io.karma.kmbed.runtime.StreamingResource""")
+        line("""import io.karma.kmbed.runtime.ZStreamingResource""")
         when (platformType) {
             KotlinPlatformType.native -> {
                 line("""import io.karma.kmbed.runtime.PinnedResource""")
                 line("""import kotlinx.cinterop.staticCFunction""")
+                line("""import kotlinx.cinterop.ExperimentalForeignApi""")
                 line("""import platform.posix.atexit""")
             }
 
@@ -144,7 +146,12 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
 
     private fun SourceBuilder.indexCleanup() {
         when (platformType) {
-            KotlinPlatformType.native -> line("""atexit(staticCFunction<Unit> { Resources.cleanup() })""")
+            KotlinPlatformType.native -> {
+                line("""// @formatter:off""")
+                line("""atexit(staticCFunction<Unit> { Resources.cleanup() })""")
+                line("""// @formatter:on""")
+            }
+
             KotlinPlatformType.jvm -> line("""Runtime.getRuntime().addShutdownHook(Thread(Resources::cleanup))""")
             else -> {}
         }
@@ -157,6 +164,15 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
             KotlinPlatformType.native -> line("""{ (this as? PinnedResource)?.ref?.unpin() }""")
             else -> line("""{}""")
         }
+    }
+
+    private fun SourceBuilder.indexOptIns() {
+        val optIns = when (platformType) {
+            KotlinPlatformType.native -> listOf("InternalKmbedApi", "ExperimentalForeignApi")
+            KotlinPlatformType.jvm, KotlinPlatformType.js -> listOf("InternalKmbedApi", "ExperimentalUnsignedTypes")
+            else -> listOf("InternalKmbedApi")
+        }
+        line("""@OptIn(${optIns.joinToString(separator = ", ") { "$it::class" }})""")
     }
 
     private fun generateIndexSources(resources: HashMap<Path, ResourceInfo>) {
@@ -174,7 +190,7 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
             indexImports()
             newline()
 
-            line("""@OptIn(InternalKmbedApi::class)""")
+            indexOptIns()
             line("""@GeneratedKmbedApi""")
             line("""private object Resources : AbstractResources(""")
             pushIndent()
@@ -189,9 +205,7 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
                 if (needsEmbedding) line("""add("$path", $fqn, $uncompressedSize)""")
                 else line("""add("$path", "", 0)""")
             }
-            line("""// @formatter:off""")
             indexCleanup()
-            line("""// @formatter:on""")
             popIndent()
             line("""}""")
             popIndent()
@@ -201,7 +215,7 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
 
             line("""@OptIn(GeneratedKmbedApi::class)""")
             line("""@Suppress("PropertyName")""")
-            line("""actual val Resources: AbstractResources""")
+            line("""actual val Res: AbstractResources""")
             line("""    get() = Resources""")
         }
 
