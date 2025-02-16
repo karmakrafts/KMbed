@@ -40,10 +40,13 @@ abstract class KmbedGenerateCommonSourcesTask : DefaultTask() {
         val source = SourceBuilder().apply {
             defaultHeader()
             newline()
-            line("""package ${extension.resourceNamespace}""")
+
+            pkg(extension.resourceNamespace)
             newline()
-            line("""import io.karma.kmbed.runtime.AbstractResources""")
+
+            import("io.karma.kmbed.runtime.AbstractResources")
             newline()
+
             line("""@Suppress("PropertyName")""")
             line("""expect val Res: AbstractResources""")
         }

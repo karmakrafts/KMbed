@@ -184,7 +184,6 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
                 line("""}""")
             }
             line("""}""")
-
             newline()
 
             optIn(listOf("GeneratedKmbedApi"))
@@ -248,13 +247,10 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
         val source = SourceBuilder().apply {
             defaultHeader()
             newline()
-
             pkg(packageName)
             newline()
-
             sourceImports()
             newline()
-
             sourceOptIns()
             line("""@GeneratedKmbedApi""")
             line("""val $fullFieldName: UByteArray = ubyteArrayOf(""")
