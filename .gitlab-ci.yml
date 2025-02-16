@@ -67,6 +67,7 @@ security:dependencies:
 
 build:
   stage: build
+  interruptible: true
   rules:
     - *if-merge-request-or-main
   before_script:
