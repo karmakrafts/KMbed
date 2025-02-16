@@ -203,7 +203,7 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
             for ((path, resourceInfo) in resources) {
                 val (_, fqn, _, uncompressedSize) = resourceInfo
                 if (needsEmbedding) line("""add("$path", $fqn, $uncompressedSize)""")
-                else line("""add("$path", "", 0)""")
+                else line("""add("$path", UByteArray(0), 0)""")
             }
             indexCleanup()
             popIndent()
