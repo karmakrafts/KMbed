@@ -45,7 +45,7 @@ abstract class KmbedGenerateCommonSourcesTask : DefaultTask() {
             line("""import io.karma.kmbed.runtime.AbstractResources""")
             newline()
             line("""@Suppress("PropertyName")""")
-            line("""expect val Resources: AbstractResources""")
+            line("""expect val Res: AbstractResources""")
         }
 
         sourcePath.deleteIfExists()

@@ -16,6 +16,8 @@
 
 package io.karma.kmbed.gradle
 
-internal data class ResourceInfo(
-    val internalName: String, val fqn: String, val size: Int, val uncompressedSize: Int
-)
+import org.gradle.api.Project
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+
+internal val Project.kotlinMultiplatformExtension: KotlinMultiplatformExtension
+    get() = extensions.getByType(KotlinMultiplatformExtension::class.java)

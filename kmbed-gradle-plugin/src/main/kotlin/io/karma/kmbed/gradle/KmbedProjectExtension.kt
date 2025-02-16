@@ -19,8 +19,8 @@ package io.karma.kmbed.gradle
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
-import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
-import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
+import org.gradle.internal.extensions.stdlib.capitalized
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import javax.inject.Inject
 
 open class KmbedProjectExtension @Inject constructor( // @formatter:off
@@ -57,21 +57,33 @@ open class KmbedProjectExtension @Inject constructor( // @formatter:off
     }
 }
 
+/**
+ * Retrieves the KMbed project extension for this project.
+ * Throws an exception if the extension is not available.
+ */
 val Project.kmbedExtension: KmbedProjectExtension
     get() = requireNotNull(extensions.findByType(KmbedProjectExtension::class.java)) {
         "Could not find KMbed project extension in $name"
     }
 
+/**
+ * Adds KMbed source sets for all configured Kotlin targets.
+ *
+ * @param project The project to add all KMbed source sets for.
+ */
 fun NamedDomainObjectContainer<KmbedSourceSet>.defaultSourceSets(project: Project) {
-    val extension = project.kmbedExtension
-    requireNotNull(project.kotlinExtension as? KotlinMultiplatformExtension) {
-        "Default source sets requires Kotlin Multiplatform extension to be present"
-    }.targets.flatMap { it.compilations }.forEach { compilation ->
-        create(compilation.name) {
-            it.compilation = compilation
-            it.compression = extension.compression
-            it.compressionThreshold = extension.compressionThreshold
-            it.resourceNamespace = extension.resourceNamespace
+    project.pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
+        val extension = project.kmbedExtension
+        for (target in project.kotlinMultiplatformExtension.targets) {
+            if (target.platformType == KotlinPlatformType.common) continue
+            for (compilation in target.compilations) {
+                create("${compilation.target.name}${compilation.name.capitalized()}") {
+                    it.compilation = compilation
+                    it.compression = extension.compression
+                    it.compressionThreshold = extension.compressionThreshold
+                    it.resourceNamespace = extension.resourceNamespace
+                }
+            }
         }
     }
 }
