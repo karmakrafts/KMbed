@@ -18,7 +18,9 @@ package io.karma.kmbed.runtime
 
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
+import kotlinx.io.buffered
 import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
 
 /**
  * An instance of this interface represents a singular resource embedded
@@ -81,6 +83,13 @@ interface Resource {
      * @return True if the resource was successfully unpacked to the specified location.
      */
     fun unpackTo(path: Path, override: Boolean = false, bufferSize: Int = 4096): Boolean {
-        return false // TODO: default implementation
+        if (SystemFileSystem.exists(path)) {
+            if (!override) return false
+            SystemFileSystem.delete(path)
+        }
+        SystemFileSystem.sink(path).buffered().use {
+            it.write(asByteArray())
+        }
+        return true
     }
 }
