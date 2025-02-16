@@ -84,6 +84,9 @@ fun TaskContainer.ensureBuildDirectory(): Task {
 // Static CI helpers
 
 object CI {
+    val isCI: Boolean
+        get() = System.getenv("CI_PROJECT_ID") != null
+
     fun getDefaultVersion(baseVersion: Provider<String>): String {
         return System.getenv("CI_COMMIT_TAG")?.let { baseVersion.get() } ?: "${baseVersion.get()}.${
             System.getenv(
@@ -226,8 +229,8 @@ class GitLabPackageArtifact(
         else localDirectoryPath / suffix
     }
 
-    val downloadTask: Task = project.tasks.maybeCreate("download${projectName.capitalized()}${suffix.capitalized()}")
-        .apply {
+    val downloadTask: Task =
+        project.tasks.maybeCreate("download${projectName.capitalized()}${suffix.capitalized()}").apply {
             group = projectName
             doLast {
                 val url = "$packageUrl/$fileName"
