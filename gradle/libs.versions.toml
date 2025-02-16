@@ -5,7 +5,7 @@ kotlin = "2.1.10" # https://github.com/JetBrains/kotlin/releases
 kotlinWrappers = "2025.2.5" # https://github.com/JetBrains/kotlin-wrappers/releases
 kotlinxIo = "0.6.0" # https://github.com/Kotlin/kotlinx-io/releases
 autoService = "1.1.1" # https://github.com/google/auto/releases
-multiplatformMman = "1.4.2" # https://git.karmakrafts.dev/kk/multiplatform-mman/-/releases
+multiplatformMman = "1.5.0" # https://git.karmakrafts.dev/kk/multiplatform-mman/-/releases
 pako = "2.1.0" # https://www.npmjs.com/package/pako?activeTab=versions
 dokka = "2.0.0" # https://github.com/Kotlin/dokka/releases
 
