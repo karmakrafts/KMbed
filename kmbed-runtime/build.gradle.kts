@@ -33,15 +33,7 @@ java {
 
 kotlin {
     jvmToolchain(java.toolchain.languageVersion.get().asInt())
-    jvm {
-        compilations.all {
-            compileTaskProvider {
-                compilerOptions {
-                    jvmTarget = JvmTarget.JVM_17
-                }
-            }
-        }
-    }
+    jvm()
     mingwX64()
     linuxX64()
     linuxArm64()
@@ -55,6 +47,7 @@ kotlin {
     iosSimulatorArm64()
     js {
         browser()
+        nodejs()
     }
     applyDefaultHierarchyTemplate()
     sourceSets {
