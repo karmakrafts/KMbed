@@ -31,7 +31,9 @@ import java.util.zip.DeflaterOutputStream
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
+import kotlin.io.path.deleteRecursively
 import kotlin.io.path.div
+import kotlin.io.path.exists
 import kotlin.io.path.fileSize
 import kotlin.io.path.readBytes
 import kotlin.io.path.relativeTo
@@ -64,6 +66,9 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
     @OptIn(ExperimentalPathApi::class)
     @TaskAction
     fun invoke() {
+        val sourceDirectory = sourceDirectory.get().asFile.toPath()
+        if (sourceDirectory.exists()) sourceDirectory.deleteRecursively()
+
         val resources = HashMap<Path, ResourceInfo>()
         for (resourceDir in resourceDirectories) {
             val resourceRoot = resourceDir.toPath()
@@ -73,6 +78,7 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
                 else findSources(path, resourceRoot, resources)
             }
         }
+
         generateIndexSources(resources)
     }
 
@@ -247,10 +253,13 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
         val source = SourceBuilder().apply {
             defaultHeader()
             newline()
+
             pkg(packageName)
             newline()
+
             sourceImports()
             newline()
+
             sourceOptIns()
             line("""@GeneratedKmbedApi""")
             line("""val $fullFieldName: UByteArray = ubyteArrayOf(""")

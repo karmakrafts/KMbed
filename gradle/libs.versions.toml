@@ -1,5 +1,5 @@
 [versions]
-kmbed = "1.8.1"
+kmbed = "1.8.2"
 
 kotlin = "2.1.10" # https://github.com/JetBrains/kotlin/releases
 kotlinWrappers = "2025.2.5" # https://github.com/JetBrains/kotlin-wrappers/releases
