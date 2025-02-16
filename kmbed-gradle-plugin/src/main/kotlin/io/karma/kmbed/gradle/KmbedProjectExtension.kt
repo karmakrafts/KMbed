@@ -29,6 +29,7 @@ open class KmbedProjectExtension @Inject constructor( // @formatter:off
 ) { // @formatter:on
     /**
      * May be used to override the default resource compression for all resources in this project.
+     * Defaults to **true**.
      */
     var compression: Boolean = true
 
@@ -36,13 +37,27 @@ open class KmbedProjectExtension @Inject constructor( // @formatter:off
      * May be used to adjust the default deflate compression threshold.
      * Any resource data that's larger than the specified value in bytes will be automatically compressed
      * by the resource compiler.
+     * Defaults to **256 bytes**.
      */
     var compressionThreshold: Int = 256
 
     /**
      * Allows adjusting the default per-module namespace used for generated resources.
+     * Defaults to the **project group value**.
      */
     var resourceNamespace: String = defaultGroup
+
+    /**
+     * The common source set used for the common resource index.
+     * Defaults to **commonMain**.
+     */
+    var commonSourceSetName: String = "commonMain"
+
+    /**
+     * The common test source set used for the common test resource index.
+     * Defaults to **commonTest**.
+     */
+    var commonTestSourceSetName: String = "commonTest"
 
     val kmbedSourceSets: NamedDomainObjectContainer<KmbedSourceSet> =
         objects.domainObjectContainer(KmbedSourceSet::class.java)

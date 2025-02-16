@@ -72,7 +72,7 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
         val resources = HashMap<Path, ResourceInfo>()
         for (resourceDir in resourceDirectories) {
             val resourceRoot = resourceDir.toPath()
-            logger.lifecycle("Processing resources in $resourceRoot")
+            logger.info("Processing resources in $resourceRoot")
             for (path in resourceRoot.walk()) {
                 if (needsEmbedding) generateSources(path, resourceRoot, resources)
                 else findSources(path, resourceRoot, resources)
@@ -84,7 +84,7 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
 
     private fun getGlobalData(path: Path): Pair<ByteArray, Int> {
         val data = path.readBytes()
-        logger.lifecycle("Read uncompressed resource $path with ${data.size} bytes")
+        logger.info("Read uncompressed resource $path with ${data.size} bytes")
         if (!extension.compression || path.fileSize() < extension.compressionThreshold) {
             return Pair(data, data.size)
         }
@@ -95,8 +95,7 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
             val compressedData = bos.toByteArray()
             val size = data.size
             val compressedSize = compressedData.size
-            val percentage = ((size.toDouble() - compressedSize.toDouble()) / size.toDouble()) * 100.0
-            logger.lifecycle("Compressed resource $path from $size to $compressedSize bytes ($percentage%)")
+            logger.info("Compressed resource $path from $size to $compressedSize bytes")
             Pair(compressedData, size)
         }
     }

@@ -49,32 +49,22 @@ open class KmbedGradlePlugin @Inject constructor(
                 extension.kmbedSourceSets.forEach { sourceSet ->
                     sourceSet.registerGenerationTask(project)
                 }
-                registerCommonGenerationTasks(project)
+                registerCommonGenerationTask(project, extension.commonSourceSetName)
+                registerCommonGenerationTask(project, extension.commonTestSourceSetName)
             }
         }
     }
 
-    private fun registerCommonGenerationTasks(project: Project) {
+    private fun registerCommonGenerationTask(project: Project, name: String) {
         val generateCommonMainKmbedSources = project.tasks.register(
-            "generateCommonMainKmbedSources", KmbedGenerateCommonSourcesTask::class.java
+            "generate${name.capitalized()}KmbedSources", KmbedGenerateCommonSourcesTask::class.java
         ).get().apply {
             group = "kmbed"
-            val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / "commonMain"
+            val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / name
             sourceDirectory.set(outputDir.toFile())
         }
-        project.kotlinMultiplatformExtension.sourceSets.getByName("commonMain").kotlin.srcDir(
+        project.kotlinMultiplatformExtension.sourceSets.findByName(name)?.kotlin?.srcDir(
             generateCommonMainKmbedSources.sourceDirectory.asFile
-        )
-
-        val generateCommonTestKmbedSources = project.tasks.register(
-            "generateCommonTestKmbedSources", KmbedGenerateCommonSourcesTask::class.java
-        ).get().apply {
-            group = "kmbed"
-            val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / "commonTest"
-            sourceDirectory.set(outputDir.toFile())
-        }
-        project.kotlinMultiplatformExtension.sourceSets.getByName("commonTest").kotlin.srcDir(
-            generateCommonTestKmbedSources.sourceDirectory.asFile
         )
     }
 
@@ -106,14 +96,14 @@ open class KmbedGradlePlugin @Inject constructor(
             mustRunAfter(commonName)
         }
 
-        project.tasks.getByName("${compilation.target.name}SourcesJar") { task ->
-            task.dependsOnGeneration()
+        project.tasks.findByName("${compilation.target.name}SourcesJar")?.apply {
+            dependsOnGeneration()
         }
-        project.tasks.getByName(compilation.compileKotlinTaskName) { task ->
-            task.dependsOnGeneration()
+        project.tasks.findByName(compilation.compileKotlinTaskName)?.apply {
+            dependsOnGeneration()
         }
-        project.tasks.getByName("commonize") { task ->
-            task.dependsOnGeneration()
+        project.tasks.findByName("commonize")?.apply {
+            dependsOnGeneration()
         }
         // Inject generated sources into default source set of current compilation
         compilation.defaultSourceSet.kotlin.srcDir(outputDir.toFile())
