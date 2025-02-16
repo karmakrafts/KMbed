@@ -90,7 +90,7 @@ publish:
   script:
     - ./gradlew
       clean
-      :kmbed-runtime:publish{MacosX64,MacosArm64,IosX64,IosArm64,IosSimulatorArm64,KotlinMultiplatform,LinuxX64,LinuxArm64,AndroidNativeX64,AndroidNativeArm64,AndroidNativeArm32,MingwX64}PublicationToGitlabRepository
+      :kmbed-runtime:publish{Jvm,Js,MacosX64,MacosArm64,IosX64,IosArm64,IosSimulatorArm64,KotlinMultiplatform,LinuxX64,LinuxArm64,AndroidNativeX64,AndroidNativeArm64,AndroidNativeArm32,MingwX64}PublicationToGitlabRepository
       publishPluginMavenPublicationToGitlabRepository
   tags:
     - macos
