@@ -1,4 +1,6 @@
 # KMbed
+[![](https://git.karmakrafts.dev/kk/kmbed/badges/master/pipeline.svg)](https://git.karmakrafts.dev/kk/kmbed/-/pipelines)
+[![](https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Ffiles.karmakrafts.dev%2Fmaven%2Fio%2Fkarma%2Fkmbed%2Fkmbed-runtime%2Fmaven-metadata.xml)](https://git.karmakrafts.dev/kk/kmbed/-/packages)
 
 KMbed is a Gradle/KMP plugin for embedding resources in KMP modules.  
 The runtime provides an API similar to Android's R-class, zlib compression and [kotlinx.io](https://github.com/Kotlin/kotlinx-io) integration.
@@ -6,8 +8,6 @@ The runtime provides an API similar to Android's R-class, zlib compression and [
 ### Multiplatform support
 
 The following KMP targets are currently supported:
-* JVM
-* JS
 * Windows x64
 * Linux x64
 * Linux arm64
@@ -18,6 +18,8 @@ The following KMP targets are currently supported:
 * Android Native x64
 * Android Native arm64
 * Android Native arm32
+* JVM
+* JS
 
 ### How to use it
 
