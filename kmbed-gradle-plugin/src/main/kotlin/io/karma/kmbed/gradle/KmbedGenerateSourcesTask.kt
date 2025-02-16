@@ -27,14 +27,12 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
 import java.util.zip.DeflaterOutputStream
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
 import kotlin.io.path.fileSize
-import kotlin.io.path.outputStream
 import kotlin.io.path.readBytes
 import kotlin.io.path.relativeTo
 import kotlin.io.path.walk
@@ -97,47 +95,23 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
         }
     }
 
-    private fun String.chunkedOnNextSpace(length: Int): List<String> {
-        val words = split(" ")
-        val lines = ArrayList<String>()
-        var currentLine = StringBuilder()
-        for (word in words) {
-            // If adding the word exceeds the line length, start a new line
-            if (currentLine.length + word.length + (if (currentLine.isNotEmpty()) 1 else 0) > length) {
-                lines.add(currentLine.toString())
-                currentLine = StringBuilder(word)
-                continue
-            }
-            // If it fits, add the word to the current line
-            if (currentLine.isNotEmpty()) {
-                currentLine.append(" ")
-            }
-            currentLine.append(word)
-        }
-        // Add the last line if it's not empty
-        if (currentLine.isNotEmpty()) {
-            lines.add(currentLine.toString())
-        }
-        return lines
-    }
-
     private fun SourceBuilder.indexImports() {
-        line("""import io.karma.kmbed.runtime.AbstractResources""")
-        line("""import io.karma.kmbed.runtime.GeneratedKmbedApi""")
-        line("""import io.karma.kmbed.runtime.InternalKmbedApi""")
-        line("""import io.karma.kmbed.runtime.StreamingResource""")
-        line("""import io.karma.kmbed.runtime.ZStreamingResource""")
+        import("io.karma.kmbed.runtime.AbstractResources")
+        import("io.karma.kmbed.runtime.GeneratedKmbedApi")
+        import("io.karma.kmbed.runtime.InternalKmbedApi")
+        import("io.karma.kmbed.runtime.StreamingResource")
+        import("io.karma.kmbed.runtime.ZStreamingResource")
         when (platformType) {
             KotlinPlatformType.native -> {
-                line("""import io.karma.kmbed.runtime.PinnedResource""")
-                line("""import kotlinx.cinterop.staticCFunction""")
-                line("""import kotlinx.cinterop.ExperimentalForeignApi""")
-                line("""import platform.posix.atexit""")
+                import("io.karma.kmbed.runtime.PinnedResource")
+                import("kotlinx.cinterop.staticCFunction")
+                import("kotlinx.cinterop.ExperimentalForeignApi")
+                import("platform.posix.atexit")
             }
 
             KotlinPlatformType.jvm -> {
-                line("""import java.lang.Runtime""")
-                line("""import java.lang.Thread""")
+                import("java.lang.Runtime")
+                import("java.lang.Thread")
             }
 
             else -> {}
@@ -147,9 +121,9 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
     private fun SourceBuilder.indexCleanup() {
         when (platformType) {
             KotlinPlatformType.native -> {
-                line("""// @formatter:off""")
+                formatterOff()
                 line("""atexit(staticCFunction<Unit> { Resources.cleanup() })""")
-                line("""// @formatter:on""")
+                formatterOn()
             }
 
             KotlinPlatformType.jvm -> line("""Runtime.getRuntime().addShutdownHook(Thread(Resources::cleanup))""")
@@ -167,12 +141,13 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
     }
 
     private fun SourceBuilder.indexOptIns() {
-        val optIns = when (platformType) {
-            KotlinPlatformType.native -> listOf("InternalKmbedApi", "ExperimentalForeignApi")
-            KotlinPlatformType.jvm, KotlinPlatformType.js -> listOf("InternalKmbedApi", "ExperimentalUnsignedTypes")
-            else -> listOf("InternalKmbedApi")
-        }
-        line("""@OptIn(${optIns.joinToString(separator = ", ") { "$it::class" }})""")
+        optIn(
+            when (platformType) {
+                KotlinPlatformType.native -> listOf("InternalKmbedApi", "ExperimentalForeignApi")
+                KotlinPlatformType.jvm, KotlinPlatformType.js -> listOf("InternalKmbedApi", "ExperimentalUnsignedTypes")
+                else -> listOf("InternalKmbedApi")
+            }
+        )
     }
 
     private fun generateIndexSources(resources: HashMap<Path, ResourceInfo>) {
@@ -183,8 +158,7 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
             defaultHeader()
             newline()
 
-            line("""package ${extension.resourceNamespace}""")
-
+            pkg(extension.resourceNamespace)
             newline()
 
             indexImports()
@@ -193,27 +167,27 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
             indexOptIns()
             line("""@GeneratedKmbedApi""")
             line("""private object Resources : AbstractResources(""")
-            pushIndent()
-            indexParameters()
-            popIndent()
-            line(""") {""")
-            pushIndent()
-            line("""init {""")
-            pushIndent()
-            for ((path, resourceInfo) in resources) {
-                val (_, fqn, _, uncompressedSize) = resourceInfo
-                if (needsEmbedding) line("""add("$path", $fqn, $uncompressedSize)""")
-                else line("""add("$path", UByteArray(0), 0)""")
+            indent {
+                indexParameters()
             }
-            indexCleanup()
-            popIndent()
-            line("""}""")
-            popIndent()
+            line(""") {""")
+            indent {
+                line("""init {""")
+                indent {
+                    for ((path, resourceInfo) in resources) {
+                        val (_, fqn, _, uncompressedSize) = resourceInfo
+                        if (needsEmbedding) line("""add("$path", $fqn, $uncompressedSize)""")
+                        else line("""add("$path", UByteArray(0), 0)""")
+                    }
+                    indexCleanup()
+                }
+                line("""}""")
+            }
             line("""}""")
 
             newline()
 
-            line("""@OptIn(GeneratedKmbedApi::class)""")
+            optIn(listOf("GeneratedKmbedApi"))
             line("""@Suppress("PropertyName")""")
             line("""actual val Res: AbstractResources""")
             line("""    get() = Resources""")
@@ -222,10 +196,7 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
         // Write out the new source file and update the entry's hash in the cache
         sourcePath.deleteIfExists()
         sourcePath.parent?.createDirectories()
-        sourcePath.outputStream(StandardOpenOption.CREATE).bufferedWriter().use {
-            it.write(source.render())
-            it.flush()
-        }
+        sourcePath.writeText(source.render())
     }
 
     private fun findSources(resourcePath: Path, resourceRoot: Path, resources: HashMap<Path, ResourceInfo>) {
@@ -236,6 +207,19 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
                 relativePath.toString().replace(fieldNameReplacePattern, "_"), "", 0, 0
             )
         }
+    }
+
+    private fun SourceBuilder.sourceImports() {
+        import("io.karma.kmbed.runtime.GeneratedKmbedApi")
+    }
+
+    private fun SourceBuilder.sourceOptIns() {
+        optIn(
+            when (platformType) {
+                KotlinPlatformType.jvm, KotlinPlatformType.js -> listOf("ExperimentalUnsignedTypes")
+                else -> emptyList()
+            }
+        )
     }
 
     @OptIn(ExperimentalStdlibApi::class)
@@ -260,22 +244,27 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
         // Generate a new Kotlin source file
         val (fieldData, uncompressedSize) = getGlobalData(resourcePath)
         val fieldName = relativePath.toString().replace(fieldNameReplacePattern, "_")
+        val fullFieldName = "__kmbed_$fieldName"
         val source = SourceBuilder().apply {
             defaultHeader()
             newline()
-            line("""package $packageName""")
+
+            pkg(packageName)
             newline()
-            line("""import io.karma.kmbed.runtime.GeneratedKmbedApi""")
+
+            sourceImports()
             newline()
+
+            sourceOptIns()
             line("""@GeneratedKmbedApi""")
-            line("""val __kmbed_$fieldName: UByteArray = ubyteArrayOf(""")
-            pushIndent()
-            // @formatter:off
-            fieldData.joinToString(", ") { "0x${it.toHexString().uppercase()}U" }
-                .chunkedOnNextSpace(100)
-                .forEach(::line)
-            // @formatter:on
-            popIndent()
+            line("""val $fullFieldName: UByteArray = ubyteArrayOf(""")
+            indent {
+                // @formatter:off
+                fieldData.joinToString(", ") { "0x${it.toHexString().uppercase()}U" }
+                    .chunkedOnNextSpace(100)
+                    .forEach(::line)
+                // @formatter:on
+            }
             line(""")""")
         }
 
@@ -286,9 +275,7 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
 
         relativePath.apply {
             require(this !in resources) { "Resource $resourcePath already exists" }
-            resources[this] = ResourceInfo(
-                fieldName, "$packageName.__kmbed_$fieldName", fieldData.size, uncompressedSize
-            )
+            resources[this] = ResourceInfo(fieldName, "$packageName.$fullFieldName", fieldData.size, uncompressedSize)
         }
     }
 }

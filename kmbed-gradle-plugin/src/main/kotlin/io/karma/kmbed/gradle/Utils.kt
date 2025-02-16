@@ -21,3 +21,27 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
 internal val Project.kotlinMultiplatformExtension: KotlinMultiplatformExtension
     get() = extensions.getByType(KotlinMultiplatformExtension::class.java)
+
+internal fun String.chunkedOnNextSpace(length: Int): List<String> {
+    val words = split(" ")
+    val lines = ArrayList<String>()
+    var currentLine = StringBuilder()
+    for (word in words) {
+        // If adding the word exceeds the line length, start a new line
+        if (currentLine.length + word.length + (if (currentLine.isNotEmpty()) 1 else 0) > length) {
+            lines.add(currentLine.toString())
+            currentLine = StringBuilder(word)
+            continue
+        }
+        // If it fits, add the word to the current line
+        if (currentLine.isNotEmpty()) {
+            currentLine.append(" ")
+        }
+        currentLine.append(word)
+    }
+    // Add the last line if it's not empty
+    if (currentLine.isNotEmpty()) {
+        lines.add(currentLine.toString())
+    }
+    return lines
+}
