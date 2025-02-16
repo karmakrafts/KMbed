@@ -31,4 +31,11 @@ allprojects {
         google()
         maven("https://files.karmakrafts.dev/maven")
     }
+
+    if (CI.isCI) {
+        dependencyLocking {
+            lockAllConfigurations()
+        }
+        val dependenciesForAll by tasks.registering(DependencyReportTask::class) {}
+    }
 }
