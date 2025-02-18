@@ -20,6 +20,14 @@ import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
 import kotlin.io.path.outputStream
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
     `java-gradle-plugin`
@@ -74,19 +82,7 @@ gradlePlugin {
 
 publishing {
     repositories {
-        System.getenv("CI_API_V4_URL")?.let { apiUrl ->
-            maven {
-                url = uri("$apiUrl/projects/${System.getenv("CI_PROJECT_ID")}/packages/maven")
-                name = "GitLab"
-                credentials(HttpHeaderCredentials::class) {
-                    name = "Job-Token"
-                    value = System.getenv("CI_JOB_TOKEN")
-                }
-                authentication {
-                    create("header", HttpHeaderAuthentication::class)
-                }
-            }
-        }
+        with(CI) { authenticatedPackageRegistry() }
     }
     publications.configureEach {
         if (this is MavenPublication) {

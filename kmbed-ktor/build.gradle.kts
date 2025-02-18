@@ -59,24 +59,8 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                api(libs.kotlinx.io.bytestring)
-                api(libs.kotlinx.io.core)
-            }
-        }
-        commonTest {
-            dependencies {
-                implementation(kotlin("test"))
-            }
-        }
-        nativeMain {
-            dependencies {
-                implementation(libs.multiplatform.mman)
-            }
-        }
-        jsMain {
-            dependencies {
-                implementation(libs.kotlin.wrappers)
-                implementation(npm("pako", libs.versions.pako.get()))
+                api(project(":kmbed-runtime"))
+                api(libs.ktor.server.core)
             }
         }
     }
@@ -87,15 +71,6 @@ dokka {
     dokkaSourceSets {
         val commonMain by creating {
             sourceRoots.from(kotlin.sourceSets.getByName("commonMain").kotlin.srcDirs)
-        }
-        val nativeMain by creating {
-            sourceRoots.from(kotlin.sourceSets.getByName("nativeMain").kotlin.srcDirs)
-        }
-        val jvmMain by creating {
-            sourceRoots.from(kotlin.sourceSets.getByName("jvmMain").kotlin.srcDirs)
-        }
-        val jsMain by creating {
-            sourceRoots.from(kotlin.sourceSets.getByName("jsMain").kotlin.srcDirs)
         }
     }
     pluginsConfiguration {
@@ -131,7 +106,7 @@ publishing {
             artifact(dokkaJar)
             pom {
                 name = project.name
-                description = "Embedded resource runtime for Kotlin/Native."
+                description = "Ktor extensions for the KMbed runtime to allow serving static, embedded content."
                 url = System.getenv("CI_PROJECT_URL")
                 licenses {
                     license {

@@ -16,6 +16,7 @@
 
 package io.karma.kmbed.runtime
 
+import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
@@ -30,14 +31,12 @@ import kotlinx.cinterop.usePinned
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
 import platform.zlib.Z_FINISH
-import platform.zlib.Z_NO_FLUSH
 import platform.zlib.Z_OK
 import platform.zlib.Z_STREAM_END
 import platform.zlib.inflate
 import platform.zlib.inflateEnd
 import platform.zlib.inflateInit
 import platform.zlib.z_stream
-import kotlin.math.min
 
 @InternalKmbedApi
 @OptIn(ExperimentalForeignApi::class)
@@ -72,13 +71,15 @@ class ZStreamingResource(
         }
     }
 
-    override fun asSource(): RawSource = ZStreamingSource(this)
+    override fun asSource(): RawSource = ZStreamingSource(address, size, uncompressedSize)
 }
 
 @InternalKmbedApi
 @OptIn(ExperimentalForeignApi::class)
 internal class ZStreamingSource(
-    private val resource: ZStreamingResource
+    private val address: COpaquePointer,
+    private val size: Long,
+    private val uncompressedSize: Long,
 ) : RawSource {
     private val stream: z_stream = nativeHeap.alloc<z_stream> {
         require(inflateInit(ptr) == Z_OK) { "Could not initialize decompression stream" }
@@ -88,21 +89,22 @@ internal class ZStreamingSource(
     private var read: Long = 0
 
     private inline val available: Long
-        get() = resource.size - read
+        get() = size - read
 
+    @OptIn(UnsafeNumber::class)
     override fun readAtMostTo(sink: Buffer, byteCount: Long): Long {
-        if (read == resource.uncompressedSize) return -1 // EOF
-        return ByteArray(min(available, byteCount).toInt()).let {
+        if (size == 0L || uncompressedSize == 0L || read == uncompressedSize) return -1 // EOF
+        return ByteArray(byteCount.toInt()).let {
             it.usePinned { pinnedBuffer ->
                 stream.apply {
                     avail_in = available.toUInt()
-                    next_in = interpretCPointer(resource.address.rawValue + read)
+                    next_in = interpretCPointer(address.rawValue)
                     avail_out = it.size.toUInt()
                     next_out = pinnedBuffer.addressOf(0).reinterpret()
                 }
-                inflate(stream.ptr, Z_NO_FLUSH)
+                inflate(stream.ptr, Z_FINISH)
             }
-            val read = stream.avail_out.toInt()
+            val read = stream.total_out.toInt()
             sink.write(it, 0, read)
             this@ZStreamingSource.read += read
             read.toLong()

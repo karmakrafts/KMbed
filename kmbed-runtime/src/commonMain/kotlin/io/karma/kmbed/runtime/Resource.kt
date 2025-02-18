@@ -17,6 +17,7 @@
 package io.karma.kmbed.runtime
 
 import kotlinx.io.Buffer
+import kotlinx.io.RawSink
 import kotlinx.io.RawSource
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
@@ -66,9 +67,12 @@ interface Resource {
      *
      * @return A new source which reads from the data of this resource via its address.
      */
-    fun asSource(): RawSource = Buffer().apply {
-        val data = asByteArray()
-        write(data, 0, data.size - 1)
+    fun asSource(): RawSource {
+        val buffer = Buffer()
+        (buffer as RawSink).buffered().apply {
+            write(asByteArray())
+        }
+        return buffer
     }
 
     /**

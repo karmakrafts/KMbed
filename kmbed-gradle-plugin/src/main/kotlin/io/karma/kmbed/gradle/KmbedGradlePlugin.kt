@@ -19,6 +19,7 @@ package io.karma.kmbed.gradle
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.internal.extensions.stdlib.capitalized
 import javax.inject.Inject
@@ -29,6 +30,10 @@ open class KmbedGradlePlugin @Inject constructor(
     private val providers: ProviderFactory
 ) : Plugin<Project> {
     override fun apply(project: Project) {
+        val serviceProvider = project.gradle.sharedServices.registerIfAbsent(
+            "KMbed Build Service", KmbedBuildService::class.java
+        )
+
         val logger = project.logger
         logger.lifecycle(
             """
@@ -47,7 +52,7 @@ open class KmbedGradlePlugin @Inject constructor(
             project.afterEvaluate {
                 // Add all defined source sets
                 extension.kmbedSourceSets.forEach { sourceSet ->
-                    sourceSet.registerGenerationTask(project)
+                    sourceSet.registerGenerationTask(project, serviceProvider)
                 }
                 registerCommonGenerationTask(project, extension.commonSourceSetName)
                 registerCommonGenerationTask(project, extension.commonTestSourceSetName)
@@ -68,7 +73,7 @@ open class KmbedGradlePlugin @Inject constructor(
         )
     }
 
-    private fun KmbedSourceSet.registerGenerationTask(project: Project) {
+    private fun KmbedSourceSet.registerGenerationTask(project: Project, serviceProvider: Provider<KmbedBuildService>) {
         // Register all required generation tasks for this compilation
         val resourceSet = compilation.allKotlinSourceSets.flatMap { it.resources.srcDirs }.filter { it.exists() }
         val compName = "${compilation.target.name}${compilation.name.capitalized()}"
@@ -77,7 +82,7 @@ open class KmbedGradlePlugin @Inject constructor(
         val taskName = "generate${compName.capitalized()}KmbedSources"
 
         val generateTask = project.tasks.register(
-            taskName, KmbedGenerateSourcesTask::class.java
+            taskName, KmbedGenerateSourcesTask::class.java, serviceProvider
         ).get().apply {
             group = "kmbed"
             platformType = compilation.platformType

@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-rootProject.name = "kmbed"
+package io.karma.kmbed
 
-pluginManagement {
-    repositories {
-        google()
-        mavenCentral()
-        gradlePluginPortal()
+import io.karma.kmbed.runtime.Resource
+import io.ktor.http.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+
+fun Routing.resource(resource: Resource, path: String = "/${resource.path}") {
+    head(path) {
+        // Head requests for a static resource should always return 200
+        call.respond(HttpStatusCode.OK)
+    }
+    get(path) {
+        call.respondBytes( // @formatter:off
+            bytes = resource.asByteArray(),
+            contentType = ContentType.defaultForFilePath(resource.path),
+            status = HttpStatusCode.OK
+        ) // @formatter:on
     }
 }
-
-dependencyResolutionManagement {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-
-include("kmbed-runtime")
-include("kmbed-gradle-plugin")
-include("kmbed-ktor")
