@@ -19,16 +19,12 @@ package io.karma.kmbed.runtime
 import io.karma.mman.RawMemorySource
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.UnsafeNumber
-import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.convert
-import kotlinx.cinterop.usePinned
 import kotlinx.io.RawSource
-import platform.posix.memcpy
 
 @InternalKmbedApi
 @OptIn(ExperimentalForeignApi::class)
 class StreamingResource(
-    override val path: String, data: UByteArray
+    override val path: String, private val data: UByteArray
 ) : NativeResource(data) {
     override val isCompressed: Boolean = false
 
@@ -37,14 +33,7 @@ class StreamingResource(
         get() = ref.get().size.toLong()
 
     @OptIn(UnsafeNumber::class)
-    override fun asByteArray(): ByteArray {
-        require(size <= Int.MAX_VALUE) { "Resource $path is too big to fit inside a ByteArray" }
-        return ByteArray(size.toInt()).apply {
-            usePinned { pinnedArray ->
-                memcpy(pinnedArray.addressOf(0), address, size.convert())
-            }
-        }
-    }
+    override fun asUByteArray(): UByteArray = data
 
     override fun asSource(): RawSource = RawMemorySource(address, size)
 }

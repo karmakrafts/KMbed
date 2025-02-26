@@ -37,6 +37,7 @@ plugins {
 dependencies {
     compileOnly(gradleApi())
     compileOnly(libs.kotlin.gradle.plugin)
+    compileOnly(libs.kotlinx.coroutines.core)
 }
 
 kotlin {

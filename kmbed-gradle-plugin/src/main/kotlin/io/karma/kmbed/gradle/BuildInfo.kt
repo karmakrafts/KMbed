@@ -20,7 +20,7 @@ internal object BuildInfo {
     const val GROUP: String = "io.karma.kmbed"
     const val PLUGIN_NAME: String = "kmbed-gradle-plugin"
 
-    val VERSION: String by lazy {
+    val version: String by lazy {
         try {
             BuildInfo::class.java.getResourceAsStream("/kmbed.version")?.bufferedReader().use {
                 it?.readText()

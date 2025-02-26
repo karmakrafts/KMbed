@@ -31,6 +31,6 @@ dependencyResolutionManagement {
     }
 }
 
-include("kmbed-runtime")
 include("kmbed-gradle-plugin")
+include("kmbed-runtime")
 include("kmbed-ktor")

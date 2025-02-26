@@ -21,7 +21,7 @@ import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-fun Routing.resource(resource: Resource, path: String = "/${resource.path}") {
+fun Route.resource(resource: Resource, path: String = "/${resource.path}") {
     head(path) {
         // Head requests for a static resource should always return 200
         call.respond(HttpStatusCode.OK)
@@ -33,4 +33,10 @@ fun Routing.resource(resource: Resource, path: String = "/${resource.path}") {
             status = HttpStatusCode.OK
         ) // @formatter:on
     }
+}
+
+// Workaround for Kotlin/Native linker issue..
+@Suppress("NOTHING_TO_INLINE")
+inline fun Routing.resource(resource: Resource, path: String = "/${resource.path}") {
+    (this as Route).resource(resource, path)
 }

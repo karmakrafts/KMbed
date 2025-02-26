@@ -19,7 +19,7 @@ package io.karma.kmbed.runtime
 @OptIn(ExperimentalUnsignedTypes::class)
 @InternalKmbedApi
 class ZStreamingResource(
-    override val path: String, private val data: UByteArray, uncompressedSize: Long
+    path: String, data: UByteArray, uncompressedSize: Long
 ) : DelegatingResource(path) {
     override val isCompressed: Boolean = true
 }

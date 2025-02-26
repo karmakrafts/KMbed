@@ -29,4 +29,7 @@ class ZStreamingResource(
     override fun asByteArray(): ByteArray {
         return pako.inflate(data.asByteArray().unsafeCast<Uint8Array<*>>()).toByteArray()
     }
+
+    @ExperimentalUnsignedTypes
+    override fun asUByteArray(): UByteArray = asByteArray().asUByteArray()
 }

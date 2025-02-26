@@ -47,7 +47,7 @@ abstract class KmbedGenerateCommonSourcesTask : DefaultTask() {
             import("io.karma.kmbed.runtime.AbstractResources")
             newline()
 
-            line("""@Suppress("PropertyName")""")
+            suppress("PropertyName")
             line("""expect val Res: AbstractResources""")
         }
 

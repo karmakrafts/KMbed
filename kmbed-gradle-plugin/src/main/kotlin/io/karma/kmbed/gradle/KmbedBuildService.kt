@@ -16,19 +16,25 @@
 
 package io.karma.kmbed.gradle
 
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 abstract class KmbedBuildService : BuildService<BuildServiceParameters.None>, AutoCloseable {
-    val executor: ExecutorService = Executors.newWorkStealingPool(Runtime.getRuntime().availableProcessors())
+    private val logger: Logger = LoggerFactory.getLogger("KMbed Build Service")
+
+    val coroutineScope: CoroutineScope =
+        CoroutineScope(Dispatchers.Default + CoroutineExceptionHandler { _, throwable ->
+            logger.error("Error while executing coroutine", throwable)
+        })
 
     override fun close() {
-        executor.shutdown()
-        if (!executor.awaitTermination(2, TimeUnit.SECONDS)) {
-            executor.shutdownNow().forEach { it.run() }
-        }
+        logger.info("Shutting down KMbed build service")
+        coroutineScope.cancel()
     }
 }

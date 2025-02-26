@@ -40,7 +40,7 @@ open class KmbedGradlePlugin @Inject constructor(
                 
             8  dP 8b   d8 8             8
             8wdP  8YbmdP8 88b. .d88b .d88  Resource Compiler
-            88Yb  8  "  8 8  8 8.dP' 8  8  Version ${BuildInfo.VERSION}
+            88Yb  8  "  8 8  8 8.dP' 8  8  Version ${BuildInfo.version}
             8  Yb 8     8 88P' `Y88P `Y88
         """.trimIndent()
         )

@@ -24,5 +24,6 @@ class StreamingResource(
     override val isCompressed: Boolean = false
     override val size: Long = data.size.toLong()
 
-    override fun asByteArray(): ByteArray = data.asByteArray()
+    @ExperimentalUnsignedTypes
+    override fun asUByteArray(): UByteArray = data
 }

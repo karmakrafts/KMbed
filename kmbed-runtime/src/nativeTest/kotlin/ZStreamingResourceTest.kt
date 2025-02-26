@@ -1,17 +1,3 @@
-import io.karma.kmbed.runtime.InternalKmbedApi
-import io.karma.kmbed.runtime.ZStreamingSource
-import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.IntVar
-import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.alloc
-import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.ptr
-import kotlinx.cinterop.usePinned
-import kotlinx.io.Buffer
-import kotlinx.io.readString
-import kotlin.test.Test
-import kotlin.test.assertEquals
-
 /*
  * Copyright 2025 Karma Krafts & associates
  *
@@ -27,6 +13,20 @@ import kotlin.test.assertEquals
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import io.karma.kmbed.runtime.InternalKmbedApi
+import io.karma.kmbed.runtime.ZStreamingSource
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.IntVar
+import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.usePinned
+import kotlinx.io.Buffer
+import kotlinx.io.readString
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 @OptIn(ExperimentalForeignApi::class, InternalKmbedApi::class)
 class ZStreamingResourceTest {

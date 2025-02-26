@@ -24,4 +24,7 @@ abstract class DelegatingResource internal constructor(
     override fun asByteArray(): ByteArray {
         return this::class.java.getResourceAsStream("/$path")?.readAllBytes() ?: ByteArray(0)
     }
+
+    @ExperimentalUnsignedTypes
+    override fun asUByteArray(): UByteArray = asByteArray().asUByteArray()
 }

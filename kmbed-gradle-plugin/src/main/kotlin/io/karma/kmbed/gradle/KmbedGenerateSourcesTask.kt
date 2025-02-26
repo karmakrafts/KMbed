@@ -16,6 +16,10 @@
 
 package io.karma.kmbed.gradle
 
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
@@ -28,7 +32,6 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Path
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.zip.DeflaterOutputStream
 import javax.inject.Inject
@@ -76,22 +79,22 @@ abstract class KmbedGenerateSourcesTask @Inject constructor(
         val sourceDirectory = sourceDirectory.get().asFile.toPath()
         if (sourceDirectory.exists()) sourceDirectory.deleteRecursively()
 
-        val executor = serviceProvider.get().executor
+        val coroutineScope = serviceProvider.get().coroutineScope
         val processorFunction = if (needsEmbedding) ::generateSources else ::findSources
         val resources = ConcurrentHashMap<Path, ResourceInfo>()
-        val futures = ArrayList<CompletableFuture<Void>>()
+        val jobs = ArrayList<Job>()
 
         for (resourceDir in resourceDirectories) {
             val resourceRoot = resourceDir.toPath()
             logger.info("Processing resources in $resourceRoot")
-            futures += resourceRoot.walk().map { path ->
-                CompletableFuture.runAsync({
+            jobs += resourceRoot.walk().map { path ->
+                coroutineScope.launch {
                     processorFunction(path, resourceRoot, resources)
-                }, executor)
+                }
             }
         }
 
-        CompletableFuture.allOf(*futures.toTypedArray()).join()
+        runBlocking { jobs.joinAll() } // Required here to bridge Gradle worker threads with coroutines
         generateIndexSources(resources)
     }
 
@@ -102,13 +105,13 @@ abstract class KmbedGenerateSourcesTask @Inject constructor(
         if (!extension.compression || path.fileSize() < extension.compressionThreshold) {
             return Pair(path.readBytes(), fileSize.toInt())
         }
-        return ByteArrayOutputStream().use { bos ->
-            DeflaterOutputStream(bos).use { dos ->
+        return ByteArrayOutputStream().use { outputStream ->
+            DeflaterOutputStream(outputStream).use { compressor ->
                 path.inputStream().use { inputStream ->
-                    inputStream.transferTo(dos)
+                    inputStream.transferTo(compressor)
                 }
             }
-            val compressedData = bos.toByteArray()
+            val compressedData = outputStream.toByteArray()
             val compressedSize = compressedData.size
             logger.info("Compressed resource $path from $fileSize to $compressedSize bytes")
             Pair(compressedData, fileSize.toInt())
@@ -164,7 +167,7 @@ abstract class KmbedGenerateSourcesTask @Inject constructor(
         optIn(
             when (platformType) {
                 KotlinPlatformType.native -> listOf("InternalKmbedApi", "ExperimentalForeignApi")
-                KotlinPlatformType.jvm, KotlinPlatformType.js -> listOf("InternalKmbedApi", "ExperimentalUnsignedTypes")
+                KotlinPlatformType.jvm, KotlinPlatformType.js, KotlinPlatformType.wasm -> listOf("InternalKmbedApi", "ExperimentalUnsignedTypes")
                 else -> listOf("InternalKmbedApi")
             }
         )
@@ -185,7 +188,7 @@ abstract class KmbedGenerateSourcesTask @Inject constructor(
             newline()
 
             indexOptIns()
-            line("""@GeneratedKmbedApi""")
+            annotation("GeneratedKmbedApi")
             line("""private object Resources : AbstractResources(""")
             indent {
                 indexParameters()
@@ -206,13 +209,14 @@ abstract class KmbedGenerateSourcesTask @Inject constructor(
             line("""}""")
             newline()
 
-            optIn(listOf("GeneratedKmbedApi"))
-            line("""@Suppress("PropertyName")""")
+            optIn("GeneratedKmbedApi")
+            suppress("PropertyName")
             line("""actual val Res: AbstractResources""")
-            line("""    get() = Resources""")
+            indent {
+                line("""get() = Resources""")
+            }
         }
 
-        // Write out the new source file and update the entry's hash in the cache
         sourcePath.deleteIfExists()
         sourcePath.parent?.createDirectories()
         sourcePath.writeText(source.render())
@@ -233,7 +237,7 @@ abstract class KmbedGenerateSourcesTask @Inject constructor(
     private fun SourceBuilder.sourceOptIns() {
         optIn(
             when (platformType) {
-                KotlinPlatformType.jvm, KotlinPlatformType.js -> listOf("ExperimentalUnsignedTypes")
+                KotlinPlatformType.jvm, KotlinPlatformType.js, KotlinPlatformType.wasm -> listOf("ExperimentalUnsignedTypes")
                 else -> emptyList()
             }
         )
@@ -260,7 +264,6 @@ abstract class KmbedGenerateSourcesTask @Inject constructor(
 
         logger.info("Processing resource $resourcePath into $sourcePath")
 
-        // Generate a new Kotlin source file
         val (fieldData, uncompressedSize) = getGlobalData(resourcePath)
         val fieldName = relativePath.toString().replace(fieldNameReplacePattern, "_")
         val fullFieldName = "__kmbed_$fieldName"
@@ -275,7 +278,7 @@ abstract class KmbedGenerateSourcesTask @Inject constructor(
             newline()
 
             sourceOptIns()
-            line("""@GeneratedKmbedApi""")
+            annotation("GeneratedKmbedApi")
             line("""val $fullFieldName: UByteArray = ubyteArrayOf(""")
             indent {
                 // @formatter:off
@@ -287,7 +290,6 @@ abstract class KmbedGenerateSourcesTask @Inject constructor(
             line(""")""")
         }
 
-        // Write out the new source file and update the entry's hash in the cache
         sourcePath.deleteIfExists()
         sourcePath.parent?.createDirectories()
         sourcePath.writeText(source.render())

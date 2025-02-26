@@ -2,19 +2,21 @@
 kmbed = "1.8.5"
 
 kotlin = "2.1.10" # https://github.com/JetBrains/kotlin/releases
-kotlinWrappers = "2025.2.5" # https://github.com/JetBrains/kotlin-wrappers/releases
+kotlinWrappers = "2025.2.8" # https://github.com/JetBrains/kotlin-wrappers/releases
+kotlinxCoroutines = "1.10.1" # https://github.com/Kotlin/kotlinx.coroutines/releases
 kotlinxIo = "0.6.0" # https://github.com/Kotlin/kotlinx-io/releases
 autoService = "1.1.1" # https://github.com/google/auto/releases
 multiplatformMman = "1.5.2" # https://git.karmakrafts.dev/kk/multiplatform-mman/-/releases
 pako = "2.1.0" # https://www.npmjs.com/package/pako?activeTab=versions
 dokka = "2.0.0" # https://github.com/Kotlin/dokka/releases
-ktor = "3.2.0-eap-1232" # https://github.com/ktorio/ktor/releases
+ktor = "3.2.0-eap-1239" # https://github.com/ktorio/ktor/releases
 
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlinx-io-bytestring = { module = "org.jetbrains.kotlinx:kotlinx-io-bytestring", version.ref = "kotlinxIo" }
 kotlinx-io-core = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinxIo" }
-kotlin-wrappers = { module = "org.jetbrains.kotlin-wrappers:kotlin-browser-js", version.ref = "kotlinWrappers" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kotlin-wrappers = { module = "org.jetbrains.kotlin-wrappers:kotlin-browser", version.ref = "kotlinWrappers" }
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
 autoService-annotations = { module = "com.google.auto.service:auto-service-annotations", version.ref = "autoService" }
 autoService-processor = { module = "com.google.auto.service:auto-service", version.ref = "autoService" }

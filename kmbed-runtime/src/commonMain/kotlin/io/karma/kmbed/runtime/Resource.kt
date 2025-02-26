@@ -26,8 +26,7 @@ import kotlinx.io.files.SystemFileSystem
 /**
  * An instance of this interface represents a singular resource embedded
  * into the final executable.
- * It may be used to interact with the immutable data of the resource,
- * including obtaining a stable pointer to it.
+ * It may be used to interact with the immutable data of the resource.
  */
 interface Resource {
     /**
@@ -53,11 +52,22 @@ interface Resource {
         get() = size
 
     /**
-     * Retrieve the raw data of this resource as a [ByteArray].
+     * Retrieve the raw data of this resource as a [UByteArray].
+     * **DO NOT MUTATE THE ARRAY RETURNED BY THIS FUNCTION!**
      *
-     * @return The raw data of this resource copied into a new [ByteArray] instance.
+     * @return The raw data of this resource as a [UByteArray].
      */
-    fun asByteArray(): ByteArray
+    @ExperimentalUnsignedTypes
+    fun asUByteArray(): UByteArray
+
+    /**
+     * Retrieve the raw data of this resource as a [ByteArray].
+     * **DO NOT MUTATE THE ARRAY RETURNED BY THIS FUNCTION!**
+     *
+     * @return The raw data of this resource as a [ByteArray].
+     */
+    @OptIn(ExperimentalUnsignedTypes::class)
+    fun asByteArray(): ByteArray = asUByteArray().asByteArray()
 
     /**
      * Creates a new streaming [RawSource] for this resource using the
@@ -74,6 +84,14 @@ interface Resource {
         }
         return buffer
     }
+
+    /**
+     * Retrieve (and decompress) this resource and decode the raw data
+     * into a UTF-8 String.
+     *
+     * @return A new String with the decoded UTF-8 data of this resource.
+     */
+    fun asString(): String = asByteArray().decodeToString()
 
     /**
      * Copies (and decompresses if needed) this resource into a new file created

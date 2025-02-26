@@ -50,9 +50,9 @@ class ZStreamingResource(
         get() = ref.get().size.toLong()
 
     @OptIn(UnsafeNumber::class)
-    override fun asByteArray(): ByteArray = memScoped {
+    override fun asUByteArray(): UByteArray = memScoped {
         require(uncompressedSize <= Int.MAX_VALUE) { "Resource $path is too big to fit inside a ByteArray" }
-        return ByteArray(uncompressedSize.toInt()).apply {
+        return UByteArray(uncompressedSize.toInt()).apply {
             usePinned { pinnedArray ->
                 val stream = alloc<z_stream>()
                 require(inflateInit(stream.ptr) == Z_OK) { "Could not initialize decompression stream" }
