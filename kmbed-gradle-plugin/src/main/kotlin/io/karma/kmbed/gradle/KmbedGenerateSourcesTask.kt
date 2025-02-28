@@ -58,6 +58,9 @@ abstract class KmbedGenerateSourcesTask @Inject constructor(
     @get:Input
     abstract var platformType: KotlinPlatformType
 
+    @get:Input
+    abstract var isTest: Boolean
+
     @get:InputFiles
     abstract val resourceDirectories: ConfigurableFileCollection
 
@@ -173,6 +176,10 @@ abstract class KmbedGenerateSourcesTask @Inject constructor(
         )
     }
 
+    private fun SourceBuilder.indexAccessors() {
+
+    }
+
     private fun generateIndexSources(resources: ConcurrentHashMap<Path, ResourceInfo>) {
         val sourcePath = sourceDirectory.get().asFile.toPath() / "__kmbed_resources.kt"
         logger.info("Generating resource index into $sourcePath")
@@ -215,6 +222,8 @@ abstract class KmbedGenerateSourcesTask @Inject constructor(
             indent {
                 line("""get() = Resources""")
             }
+
+            indexAccessors()
         }
 
         sourcePath.deleteIfExists()

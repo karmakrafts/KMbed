@@ -18,10 +18,14 @@ package io.karma.kmbed.gradle
 
 import org.gradle.api.Named
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
+import java.io.File
 
 open class KmbedSourceSet(
     private val name: String
 ) : Named {
+    /**
+     * The Kotlin compilation associated with this resource set after project evaluation.
+     */
     lateinit var compilation: KotlinCompilation<*>
 
     /**
@@ -42,4 +46,13 @@ open class KmbedSourceSet(
     var resourceNamespace: String = ""
 
     override fun getName(): String = name
+
+    internal inline val isTest: Boolean
+        get() = compilation.compilationName == KotlinCompilation.TEST_COMPILATION_NAME
+
+    internal fun getResourceRoots(): List<File> { // @formatter:off
+        return compilation.allKotlinSourceSets
+            .flatMap { it.resources.srcDirs }
+            .filter { it.exists() }
+    } // @formatter:on
 }

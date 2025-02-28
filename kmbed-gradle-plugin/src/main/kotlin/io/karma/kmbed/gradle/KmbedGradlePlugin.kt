@@ -51,16 +51,26 @@ open class KmbedGradlePlugin @Inject constructor(
             project.extensions.add("kmbedSourceSets", extension.kmbedSourceSets)
             project.afterEvaluate {
                 // Add all defined source sets
-                extension.kmbedSourceSets.forEach { sourceSet ->
+                val generationTasks = extension.kmbedSourceSets.map { sourceSet ->
                     sourceSet.registerGenerationTask(project, serviceProvider)
                 }
-                registerCommonGenerationTask(project, extension.commonSourceSetName)
-                registerCommonGenerationTask(project, extension.commonTestSourceSetName)
+                registerCommonGenerationTask(project, extension.commonSourceSetName).apply {
+                    // Make sure the common source generation includes all platform-specific non-test tasks as dependencies
+                    generationTasks.filterNot { it.isTest }.forEach { dependency ->
+                        dependsOn(dependency)
+                    }
+                }
+                registerCommonGenerationTask(project, extension.commonTestSourceSetName).apply {
+                    // Make sure the common test source generation includes all platform-specific test tasks as dependencies
+                    generationTasks.filter { it.isTest }.forEach { dependency ->
+                        dependsOn(dependency)
+                    }
+                }
             }
         }
     }
 
-    private fun registerCommonGenerationTask(project: Project, name: String) {
+    private fun registerCommonGenerationTask(project: Project, name: String): KmbedGenerateCommonSourcesTask {
         val generateCommonMainKmbedSources = project.tasks.register(
             "generate${name.capitalized()}KmbedSources", KmbedGenerateCommonSourcesTask::class.java
         ).get().apply {
@@ -71,11 +81,14 @@ open class KmbedGradlePlugin @Inject constructor(
         project.kotlinMultiplatformExtension.sourceSets.findByName(name)?.kotlin?.srcDir(
             generateCommonMainKmbedSources.sourceDirectory.asFile
         )
+        return generateCommonMainKmbedSources
     }
 
-    private fun KmbedSourceSet.registerGenerationTask(project: Project, serviceProvider: Provider<KmbedBuildService>) {
+    private fun KmbedSourceSet.registerGenerationTask(
+        project: Project,
+        serviceProvider: Provider<KmbedBuildService>
+    ): KmbedGenerateSourcesTask {
         // Register all required generation tasks for this compilation
-        val resourceSet = compilation.allKotlinSourceSets.flatMap { it.resources.srcDirs }.filter { it.exists() }
         val compName = "${compilation.target.name}${compilation.name.capitalized()}"
         val outputDir = project.layout.buildDirectory.asFile.get().toPath() / "kmbedSources" / compName
         outputDir.createDirectories()
@@ -85,8 +98,9 @@ open class KmbedGradlePlugin @Inject constructor(
             taskName, KmbedGenerateSourcesTask::class.java, serviceProvider
         ).get().apply {
             group = "kmbed"
+            resourceDirectories.setFrom(getResourceRoots())
             platformType = compilation.platformType
-            resourceDirectories.setFrom(*resourceSet.toTypedArray())
+            isTest = this@registerGenerationTask.isTest
             sourceDirectory.set(outputDir.toFile())
         }
 
@@ -95,7 +109,7 @@ open class KmbedGradlePlugin @Inject constructor(
             dependsOn(generateTask)
             mustRunAfter(generateTask)
             // We depend on either source set, defaulting to main instead of test
-            val commonName = if ("test" in name.lowercase()) "generateCommonTestKmbedSources"
+            val commonName = if (isTest) "generateCommonTestKmbedSources"
             else "generateCommonMainKmbedSources"
             dependsOn(commonName)
             mustRunAfter(commonName)
@@ -112,5 +126,6 @@ open class KmbedGradlePlugin @Inject constructor(
         }
         // Inject generated sources into default source set of current compilation
         compilation.defaultSourceSet.kotlin.srcDir(outputDir.toFile())
+        return generateTask
     }
 }

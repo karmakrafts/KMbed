@@ -9,7 +9,7 @@ autoService = "1.1.1" # https://github.com/google/auto/releases
 multiplatformMman = "1.5.2" # https://git.karmakrafts.dev/kk/multiplatform-mman/-/releases
 pako = "2.1.0" # https://www.npmjs.com/package/pako?activeTab=versions
 dokka = "2.0.0" # https://github.com/Kotlin/dokka/releases
-ktor = "3.2.0-eap-1239" # https://github.com/ktorio/ktor/releases
+ktor = "3.2.0-eap-1243" # https://github.com/ktorio/ktor/releases
 
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
