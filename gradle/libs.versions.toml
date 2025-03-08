@@ -1,6 +1,7 @@
 [versions]
-kmbed = "1.8.5"
+java = "11"
 
+kmbed = "1.8.5"
 kotlin = "2.1.10" # https://github.com/JetBrains/kotlin/releases
 kotlinxCoroutines = "1.10.1" # https://github.com/Kotlin/kotlinx.coroutines/releases
 kotlinWrappers = "2025.3.6" # https://github.com/JetBrains/kotlin-wrappers/releases
@@ -10,6 +11,7 @@ kmmio = "1.6.0.0-SNAPSHOT" # https://git.karmakrafts.dev/kk/multiplatform-mman/-
 pako = "2.1.0" # https://www.npmjs.com/package/pako?activeTab=versions
 dokka = "2.0.0" # https://github.com/Kotlin/dokka/releases
 ktor = "3.1.1" # https://github.com/ktorio/ktor/releases
+karmaConventions = "1.0.0.0-SNAPSHOT"
 
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -27,3 +29,4 @@ kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+karmaConventions = { id = "io.karma.conventions.karma-conventions", version.ref = "karmaConventions" }

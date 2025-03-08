@@ -1,7 +1,3 @@
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
-
 /*
  * Copyright 2025 Karma Krafts & associates
  *
@@ -18,18 +14,13 @@ import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
  * limitations under the License.
  */
 
+import io.karma.conventions.GitLabCI
+import java.time.ZonedDateTime
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.dokka)
     `maven-publish`
-}
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(11)
-    }
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
 }
 
 kotlin {
@@ -50,11 +41,6 @@ kotlin {
         browser()
         nodejs()
     }
-    //@OptIn(ExperimentalWasmDsl::class)
-    //wasmJs {
-    //    browser()
-    //    nodejs()
-    //}
     applyDefaultHierarchyTemplate()
     sourceSets {
         commonMain {
@@ -75,7 +61,7 @@ dokka {
     }
     pluginsConfiguration {
         html {
-            footerMessage = "(c) 2025 Karma Krafts & associates"
+            footerMessage = "(c) ${ZonedDateTime.now().year} Karma Krafts & associates"
         }
     }
 }
@@ -99,7 +85,7 @@ tasks {
 
 publishing {
     repositories {
-        with(CI) { authenticatedPackageRegistry() }
+        with(GitLabCI) { authenticatedPackageRegistry() }
     }
     publications.configureEach {
         if (this is MavenPublication) {

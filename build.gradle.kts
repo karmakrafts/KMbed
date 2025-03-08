@@ -14,28 +14,20 @@
  * limitations under the License.
  */
 
+import io.karma.conventions.GitLabCI
+import io.karma.conventions.configureJava
+
 plugins {
     alias(libs.plugins.dokka) apply false
+    alias(libs.plugins.karmaConventions)
 }
 
 group = "io.karma.kmbed"
-version = CI.getDefaultVersion(libs.versions.kmbed)
+version = GitLabCI.getDefaultVersion(libs.versions.kmbed)
 
 allprojects {
     group = rootProject.group
     version = rootProject.version
-
-    repositories {
-        mavenCentral()
-        mavenLocal()
-        google()
-        maven("https://files.karmakrafts.dev/maven")
-    }
-
-    if (CI.isCI) {
-        dependencyLocking {
-            lockAllConfigurations()
-        }
-        val dependenciesForAll by tasks.registering(DependencyReportTask::class) {}
-    }
+    configureJava(rootProject.libs.versions.java)
+    with(GitLabCI) { configureDefaults() }
 }

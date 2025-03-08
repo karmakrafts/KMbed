@@ -17,6 +17,7 @@
 package io.karma.kmbed.runtime
 
 import js.typedarrays.Uint8Array
+import js.typedarrays.toByteArray
 
 @OptIn(ExperimentalUnsignedTypes::class)
 @InternalKmbedApi

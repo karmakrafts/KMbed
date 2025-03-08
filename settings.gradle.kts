@@ -20,7 +20,9 @@ pluginManagement {
     repositories {
         google()
         mavenCentral()
+        mavenLocal()
         gradlePluginPortal()
+        maven("https://files.karmakrafts.dev/maven")
     }
 }
 
@@ -28,6 +30,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        mavenLocal()
+        maven("https://files.karmakrafts.dev/maven")
     }
 }
 

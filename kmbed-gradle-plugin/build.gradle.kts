@@ -14,19 +14,12 @@
  * limitations under the License.
  */
 
+import io.karma.conventions.GitLabCI
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
 import kotlin.io.path.outputStream
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(11)
-    }
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-}
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -64,8 +57,7 @@ tasks {
     compileKotlin { dependsOn(processResources) }
 }
 
-@Suppress("UnstableApiUsage")
-gradlePlugin {
+@Suppress("UnstableApiUsage") gradlePlugin {
     System.getenv("CI_PROJECT_URL")?.let {
         website = it
         vcsUrl = it
@@ -83,7 +75,7 @@ gradlePlugin {
 
 publishing {
     repositories {
-        with(CI) { authenticatedPackageRegistry() }
+        with(GitLabCI) { authenticatedPackageRegistry() }
     }
     publications.configureEach {
         if (this is MavenPublication) {
