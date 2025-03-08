@@ -70,7 +70,7 @@ kotlin {
         }
         nativeMain {
             dependencies {
-                implementation(libs.multiplatform.mman)
+                implementation(libs.kmmio)
             }
         }
         jsMain {

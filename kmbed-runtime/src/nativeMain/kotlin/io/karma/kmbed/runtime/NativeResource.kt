@@ -16,7 +16,7 @@
 
 package io.karma.kmbed.runtime
 
-import io.karma.mman.MemoryRegion
+import io.karma.kmmio.MemoryRegion
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.Pinned

@@ -29,7 +29,6 @@ allprojects {
         mavenCentral()
         mavenLocal()
         google()
-        maven("https://maven.pkg.jetbrains.space/public/p/ktor/eap")
         maven("https://files.karmakrafts.dev/maven")
     }
 

@@ -16,7 +16,7 @@
 
 package io.karma.kmbed.runtime
 
-import io.karma.mman.RawMemorySource
+import io.karma.kmmio.RawMemorySource
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.UnsafeNumber
 import kotlinx.io.RawSource
