@@ -1,7 +1,7 @@
 [versions]
 java = "11"
 
-kmbed = "1.8.5"
+kmbed = "1.9.0"
 kotlin = "2.1.10" # https://github.com/JetBrains/kotlin/releases
 kotlinxCoroutines = "1.10.1" # https://github.com/Kotlin/kotlinx.coroutines/releases
 kotlinWrappers = "2025.3.6" # https://github.com/JetBrains/kotlin-wrappers/releases
