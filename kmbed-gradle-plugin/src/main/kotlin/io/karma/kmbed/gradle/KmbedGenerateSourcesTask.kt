@@ -208,7 +208,7 @@ abstract class KmbedGenerateSourcesTask @Inject constructor(
 
             optIn(listOf("GeneratedKmbedApi"))
             line("""@Suppress("PropertyName")""")
-            line("""actual val Res: AbstractResources""")
+            line("""public actual val Res: AbstractResources""")
             line("""    get() = Resources""")
         }
 
@@ -276,7 +276,7 @@ abstract class KmbedGenerateSourcesTask @Inject constructor(
 
             sourceOptIns()
             line("""@GeneratedKmbedApi""")
-            line("""val $fullFieldName: UByteArray = ubyteArrayOf(""")
+            line("""public val $fullFieldName: UByteArray = ubyteArrayOf(""")
             indent {
                 // @formatter:off
                 fieldData.joinToString(", ") { "0x${it.toHexString().uppercase()}U" }

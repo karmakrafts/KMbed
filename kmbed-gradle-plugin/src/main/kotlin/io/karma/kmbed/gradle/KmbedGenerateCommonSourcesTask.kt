@@ -48,7 +48,7 @@ abstract class KmbedGenerateCommonSourcesTask : DefaultTask() {
             newline()
 
             line("""@Suppress("PropertyName")""")
-            line("""expect val Res: AbstractResources""")
+            line("""public expect val Res: AbstractResources""")
         }
 
         sourcePath.deleteIfExists()
