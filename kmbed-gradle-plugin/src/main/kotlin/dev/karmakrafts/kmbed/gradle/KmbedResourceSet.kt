@@ -17,11 +17,13 @@
 package dev.karmakrafts.kmbed.gradle
 
 import org.gradle.api.Named
+import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
+import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import java.io.Serializable
 import javax.inject.Inject
 
@@ -61,4 +63,11 @@ open class KmbedResourceSet @Inject constructor( // @formatter:off
     inline fun resource(path: String, block: KmbedResourceConfig.() -> Unit) {
         resources.put(path, objects.newInstance(KmbedResourceConfig::class.java).apply(block))
     }
+
+    internal fun getCompilation(project: Project): KotlinCompilation<*> { // @formatter:off
+        return project.kmpExtension.targets
+            .first { target -> target.targetName == targetName.get() }
+            .compilations
+            .first { compilation -> compilation.compilationName == compilationName.get() }
+    } // @formatter:on
 }

@@ -64,13 +64,8 @@ open class KmbedGradlePlugin : Plugin<Project> {
         project: Project, extension: KmbedProjectExtension, resourceSet: KmbedResourceSet
     ): TaskProvider<KmbedListResourcesTask> {
         val name = resourceSet.name
-        val compilationName = resourceSet.compilationName.get()
-        val targetName = resourceSet.targetName.get()
+        val compilation = resourceSet.getCompilation(project)
         // @formatter:off
-        val compilation = project.kmpExtension.targets
-            .first { target -> target.targetName == targetName }
-            .compilations
-            .first { compilation -> compilation.compilationName == compilationName }
         val resourceDirectories = compilation.allKotlinSourceSets
             .flatMap { sourceSet -> sourceSet.resources.srcDirs }
             .toTypedArray()
