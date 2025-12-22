@@ -1,27 +1,43 @@
 [versions]
-kmbed = "1.8.5"
 
-kotlin = "2.1.10" # https://github.com/JetBrains/kotlin/releases
-kotlinWrappers = "2025.2.5" # https://github.com/JetBrains/kotlin-wrappers/releases
-kotlinxIo = "0.6.0" # https://github.com/Kotlin/kotlinx-io/releases
+java = "21"
+
+androidGradle = "8.12.3" # https://developer.android.com/reference/tools/gradle-api
+androidCompileSDK = "36"
+androidMinimalSDK = "28"
+
+kmbed = "2.0.0"
+kotlin = "2.3.0" # https://github.com/JetBrains/kotlin/releases
+kotlinxSerialization = "1.10.0-RC" # https://github.com/Kotlin/kotlinx.serialization/releases
+kotlinxIo = "0.8.2" # https://github.com/Kotlin/kotlinx-io/releases
+karmaConventions = "1.9.4" # https://github.com/karmakrafts/karma-conventions/tags
+kompress = "1.3.0" # https://github.com/karmakrafts/Kompress/tags
+kmmio = "2.0.2" # https://github.com/karmakrafts/kMMIO/tags
 autoService = "1.1.1" # https://github.com/google/auto/releases
-multiplatformMman = "1.5.2" # https://git.karmakrafts.dev/kk/multiplatform-mman/-/releases
-pako = "2.1.0" # https://www.npmjs.com/package/pako?activeTab=versions
-dokka = "2.0.0" # https://github.com/Kotlin/dokka/releases
-ktor = "3.2.0-eap-1232" # https://github.com/ktorio/ktor/releases
+dokka = "2.1.0" # https://github.com/Kotlin/dokka/releases
+ktor = "3.3.3" # https://github.com/ktorio/ktor/releases
+gradleNexus = "2.0.0" # https://github.com/gradle-nexus/publish-plugin/releases
 
 [libraries]
+
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlinx-io-bytestring = { module = "org.jetbrains.kotlinx:kotlinx-io-bytestring", version.ref = "kotlinxIo" }
 kotlinx-io-core = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinxIo" }
-kotlin-wrappers = { module = "org.jetbrains.kotlin-wrappers:kotlin-browser-js", version.ref = "kotlinWrappers" }
+kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerialization" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
 autoService-annotations = { module = "com.google.auto.service:auto-service-annotations", version.ref = "autoService" }
 autoService-processor = { module = "com.google.auto.service:auto-service", version.ref = "autoService" }
-multiplatform-mman = { module = "io.karma.mman:multiplatform-mman", version.ref = "multiplatformMman" }
+kmmio-core = { module = "dev.karmakrafts.kmmio:kmmio-core", version.ref = "kmmio" }
+kompress-core = { module = "dev.karmakrafts.kompress:kompress-core", version.ref = "kompress" }
 
 [plugins]
+
+karmaConventions = { id = "dev.karmakrafts.conventions.karma-conventions", version.ref = "karmaConventions" }
+android-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "androidGradle" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+gradleNexus = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "gradleNexus" }

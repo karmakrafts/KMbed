@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Karma Krafts & associates
+ * Copyright 2025 Karma Krafts
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,32 +14,38 @@
  * limitations under the License.
  */
 
+import dev.karmakrafts.conventions.configureJava
+import dev.karmakrafts.conventions.defaultDokkaConfig
+import dev.karmakrafts.conventions.setProjectInfo
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
 import kotlin.io.path.outputStream
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(11)
-    }
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-}
-
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.dokka)
+    alias(libs.plugins.kotlin.serialization)
     `java-gradle-plugin`
     `maven-publish`
 }
 
+configureJava(libs.versions.java)
+defaultDokkaConfig()
+
 dependencies {
     compileOnly(gradleApi())
     compileOnly(libs.kotlin.gradle.plugin)
+    implementation(libs.kotlinx.serialization.core)
+    implementation(libs.kotlinx.serialization.json)
 }
 
 kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xcontext-parameters")
+        freeCompilerArgs.add("-Xexplicit-backing-fields")
+    }
     sourceSets {
         main {
             resources.srcDir("build/generated")
@@ -48,9 +54,11 @@ kotlin {
 }
 
 tasks {
+    val buildPath = layout.buildDirectory.asFile.get().toPath()
     val createVersionFile by registering {
+        inputs.property("buildPath", buildPath)
         doFirst {
-            val path = (layout.buildDirectory.asFile.get().toPath() / "generated" / "kmbed.version")
+            val path = (buildPath / "generated" / "kmbed.version")
             path.deleteIfExists()
             path.parent.createDirectories()
             path.outputStream(StandardOpenOption.CREATE).bufferedWriter().use {
@@ -63,50 +71,26 @@ tasks {
     compileKotlin { dependsOn(processResources) }
 }
 
-@Suppress("UnstableApiUsage")
 gradlePlugin {
     System.getenv("CI_PROJECT_URL")?.let {
         website = it
         vcsUrl = it
     }
     plugins {
-        create("KMbed Gradle Plugin") {
+        create("plugin") {
             id = "$group.${rootProject.name}-gradle-plugin"
             implementationClass = "$group.gradle.KmbedGradlePlugin"
-            displayName = "KMbed Gradle Plugin"
-            description = "Gradle plugin for applying the KMbed Kotlin compiler plugin"
+            displayName = "kMbed Gradle Plugin"
+            description = "Gradle plugin for applying the kMbed Kotlin compiler plugin"
             tags.addAll("kotlin", "native", "interop", "codegen")
         }
     }
 }
 
 publishing {
-    repositories {
-        with(CI) { authenticatedPackageRegistry() }
-    }
-    publications.configureEach {
-        if (this is MavenPublication) {
-            pom {
-                name = project.name
-                description = "Embedded resource tooling for Kotlin/Native."
-                url = System.getenv("CI_PROJECT_URL")
-                licenses {
-                    license {
-                        name = "Apache License 2.0"
-                        url = "https://www.apache.org/licenses/LICENSE-2.0"
-                    }
-                }
-                developers {
-                    developer {
-                        id = "kitsunealex"
-                        name = "KitsuneAlex"
-                        url = "https://git.karmakrafts.dev/KitsuneAlex"
-                    }
-                }
-                scm {
-                    url = this@pom.url
-                }
-            }
-        }
-    }
+    setProjectInfo(
+        name = "kMbed Gradle Plugin",
+        description = "Gradle Plugin for bootstrapping the kMbed resource compiler.",
+        url = "https://git.karmakrafts.dev/kk/kmbed"
+    )
 }

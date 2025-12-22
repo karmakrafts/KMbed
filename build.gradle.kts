@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Karma Krafts & associates
+ * Copyright 2025 Karma Krafts
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,29 +14,50 @@
  * limitations under the License.
  */
 
+import dev.karmakrafts.conventions.GitLabCI
+import dev.karmakrafts.conventions.apache2License
+import dev.karmakrafts.conventions.authenticatedSonatype
+import dev.karmakrafts.conventions.defaultDependencyLocking
+import dev.karmakrafts.conventions.setRepository
+import dev.karmakrafts.conventions.signPublications
+import java.time.Duration
+
 plugins {
+    alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
+    alias(libs.plugins.android.library) apply false
     alias(libs.plugins.dokka) apply false
+    alias(libs.plugins.gradleNexus)
+    alias(libs.plugins.karmaConventions)
+    `maven-publish`
+    signing
 }
 
-group = "io.karma.kmbed"
-version = CI.getDefaultVersion(libs.versions.kmbed)
+group = "dev.karmakrafts.kmbed"
+version = GitLabCI.getDefaultVersion(libs.versions.kmbed)
 
-allprojects {
+subprojects {
+    apply<MavenPublishPlugin>()
+    apply<SigningPlugin>()
+
     group = rootProject.group
     version = rootProject.version
+    if (GitLabCI.isCI) defaultDependencyLocking()
 
-    repositories {
-        mavenCentral()
-        mavenLocal()
-        google()
-        maven("https://maven.pkg.jetbrains.space/public/p/ktor/eap")
-        maven("https://files.karmakrafts.dev/maven")
+    publishing {
+        apache2License()
+        setRepository("github.com", "karmakrafts/kMbed")
+        with(GitLabCI) { karmaKraftsDefaults() }
     }
 
-    if (CI.isCI) {
-        dependencyLocking {
-            lockAllConfigurations()
-        }
-        val dependenciesForAll by tasks.registering(DependencyReportTask::class) {}
+    signing {
+        signPublications()
     }
+}
+
+nexusPublishing {
+    authenticatedSonatype()
+    connectTimeout = Duration.ofSeconds(30)
+    clientTimeout = Duration.ofMinutes(45)
 }

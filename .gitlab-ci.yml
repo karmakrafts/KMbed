@@ -34,7 +34,7 @@ variables:
 
 # ------------------------------ Security
 
-security:dependencies:
+security:
   stage: security
   interruptible: true
   needs: [ ]
@@ -58,10 +58,10 @@ security:dependencies:
     - ./gradlew dependenciesForAll --write-locks --no-parallel > dependencies.txt
   script:
     - trivy repo ./ --exit-code 0
-    - trivy repo ./ --exit-code 0 --format template --template "@/contrib/gitlab.tpl" --output report.json
+    - trivy repo ./ --exit-code 0 --format template --template "@/Volumes/Data/contrib/gitlab.tpl" --output report.json
     - trivy repo ./ --exit-code 1 --severity CRITICAL
   tags:
-    - linux
+    - macos
 
 # ------------------------------ Build
 
@@ -70,36 +70,38 @@ build:
   interruptible: true
   rules:
     - *if-merge-request-or-main
-  before_script:
-    - export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
   script:
-    - ./gradlew clean build
+    - ./gradlew clean build --stacktrace
   tags:
     - macos
 
 # ------------------------------ Publish
 
-publish:
+publish-gitlab:
   stage: publish
   rules:
     - *if-main
     - *if-release
-  before_script:
-    - export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
   script:
-    - ./gradlew clean publish
+    - ./gradlew publishAllPublicationsToGitLabRepository
   tags:
     - macos
 
-publish:documentation:
+publish-central:
+  stage: publish
+  rules:
+    - *if-main
+    - *if-release
+  script:
+    - ./gradlew publishToSonatype closeAndReleaseStagingRepositories
+  tags:
+    - macos
+
+publish-documentation:
   stage: publish
   rules:
     - *if-release
-  before_script:
-    - export JAVA_HOME=/home/sdks/zulu-17
   script:
-    - ./gradlew
-      -DpublishDocs.root=/var/www/docs/kmbed
-      publishDocs
+    - ./gradlew -DpublishDocs.root=/var/www/docs publishDocs
   tags:
-    - linux
+    - docs
