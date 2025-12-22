@@ -30,6 +30,7 @@ import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.inject.Inject
+import kotlin.io.path.absolutePathString
 import kotlin.io.path.isDirectory
 import kotlin.streams.asSequence
 
@@ -55,16 +56,21 @@ abstract class KmbedListResourcesTask @Inject constructor(
 
     @TaskAction
     fun invoke() {
+        val fileSystem = FileSystems.getDefault()
         val excludeFilter: (Path) -> Boolean = excludes.get()
-            .map { pattern -> FileSystems.getDefault().getPathMatcher("glob:$pattern") }
+            .map { pattern -> fileSystem.getPathMatcher("glob:$pattern") }
             .map<_, Function1<Path, Boolean>> { matcher -> matcher::matches }
             .fold({ false }) { acc, fn -> { path -> acc(path) || fn(path) } }
 
+        logger.info("Compiled exclude filters")
+
         resources.from(*directories.flatMap { file ->
+            logger.info("Gathering resources from ${file.absolutePath}")
             Files.walk(file.toPath(), maxRecursionDepth.get())
                 .asSequence()
                 .filterNot(Path::isDirectory)
                 .filterNot(excludeFilter)
+                .onEach { path -> logger.info("Gathered resource from ${path.absolutePathString()}") }
                 .map(Path::toFile)
                 .toList()
         }.toTypedArray())
