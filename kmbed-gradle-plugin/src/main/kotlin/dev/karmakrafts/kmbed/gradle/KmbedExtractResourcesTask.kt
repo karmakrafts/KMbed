@@ -19,9 +19,12 @@ package dev.karmakrafts.kmbed.gradle
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
 
+/**
+ * A special task only used for web targets in order to extract embedded
+ * resources from the KLIB file(s) correctly to make them accessible to fetch
+ * from the web root.
+ */
 abstract class KmbedExtractResourcesTask : DefaultTask() {
-    protected val extension: KmbedProjectExtension = project.extensions.findByType(KmbedProjectExtension::class.java)!!
-
     @TaskAction
     fun invoke() {
 

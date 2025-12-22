@@ -30,6 +30,10 @@ open class KmbedProjectExtension @Inject constructor( // @formatter:off
     objects: ObjectFactory,
     defaultNamespace: String
 ) { // @formatter:on
+    companion object {
+        private val webPlatformTypes: Set<KotlinPlatformType> = setOf(KotlinPlatformType.js, KotlinPlatformType.wasm)
+    }
+
     val taskNamePrefix: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
     val compression: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
     val compressionThreshold: Property<Long> =
@@ -63,19 +67,21 @@ open class KmbedProjectExtension @Inject constructor( // @formatter:off
     }
 
     internal fun addDefaultResourceSets(project: Project) {
-        project.pluginManager.withPlugin(KMP_PLUGIN_ID) {
-            for (target in project.kmpExtension.targets) {
-                if (target.platformType == KotlinPlatformType.common) continue
-                for (compilation in target.compilations) {
-                    resourceSets.create("${compilation.target.name}${compilation.name.capitalized()}") { set ->
-                        set.compilationName.set(compilation.compilationName)
-                        set.namespace.set(namespace)
-                        set.compression.set(compression)
-                        set.compressionThreshold.set(compressionThreshold)
-                        set.export.set(export)
-                        set.generateIndex.set(generateIndex)
-                        set.excludes.addAll(excludes)
-                    }
+        for (target in project.kmpExtension.targets) {
+            val platformType = target.platformType
+            if (platformType == KotlinPlatformType.common) continue
+            for (compilation in target.compilations) {
+                resourceSets.create("${compilation.target.name}${compilation.name.capitalized()}") { set ->
+                    set.targetName.set(target.targetName)
+                    set.compilationName.set(compilation.compilationName)
+                    set.namespace.set(namespace)
+                    set.compression.set(compression)
+                    set.compressionThreshold.set(compressionThreshold)
+                    set.export.set(export)
+                    set.generateIndex.set(generateIndex)
+                    set.excludes.addAll(excludes)
+                    // Resources are only extracted for web targets by default
+                    set.extractDependencyResources.set(platformType in webPlatformTypes)
                 }
             }
         }

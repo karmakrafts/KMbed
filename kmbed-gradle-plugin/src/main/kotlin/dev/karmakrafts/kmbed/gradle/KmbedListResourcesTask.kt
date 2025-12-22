@@ -65,6 +65,7 @@ abstract class KmbedListResourcesTask @Inject constructor(
         logger.info("Compiled exclude filters")
 
         resources.from(*directories.flatMap { file ->
+            if (!file.exists()) return@flatMap emptyList()
             logger.info("Gathering resources from ${file.absolutePath}")
             Files.walk(file.toPath(), maxRecursionDepth.get())
                 .asSequence()

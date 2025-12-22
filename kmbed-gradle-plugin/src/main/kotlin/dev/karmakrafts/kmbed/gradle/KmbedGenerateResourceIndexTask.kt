@@ -18,23 +18,12 @@ package dev.karmakrafts.kmbed.gradle
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
-import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
-abstract class KmbedSourceGenerationTask : DefaultTask() {
-    @get:InputFiles
-    abstract val resourceFiles: ConfigurableFileCollection
-
+abstract class KmbedGenerateResourceIndexTask : DefaultTask() {
     @get:Input
-    abstract val platformType: Property<KotlinPlatformType>
-
-    @get:OutputDirectory
-    abstract val sourceDirectory: DirectoryProperty
+    abstract val resources: ConfigurableFileCollection
 
     @TaskAction
     fun invoke() {

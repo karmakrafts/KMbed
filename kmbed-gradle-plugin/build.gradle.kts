@@ -40,6 +40,10 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 }
 
+java {
+    withSourcesJar()
+}
+
 kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xexplicit-backing-fields")
@@ -68,6 +72,12 @@ tasks {
     }
     processResources { dependsOn(createVersionFile) }
     compileKotlin { dependsOn(processResources) }
+
+    val compileJava by getting
+    @Suppress("UNUSED")
+    val sourcesJar by getting {
+        dependsOn(compileJava)
+    }
 }
 
 gradlePlugin {

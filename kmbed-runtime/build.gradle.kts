@@ -34,6 +34,7 @@ kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xreturn-value-checker=check")
     }
+    withSourcesJar(true)
     jvmToolchain(java.toolchain.languageVersion.get().asInt())
     jvm()
     androidLibrary {

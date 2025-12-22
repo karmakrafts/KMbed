@@ -20,10 +20,12 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.logging.Logger
 import org.gradle.internal.extensions.stdlib.capitalized
-import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
-import java.io.File
 
 open class KmbedGradlePlugin : Plugin<Project> {
+    companion object {
+        private const val TASK_GROUP: String = "kmbed"
+    }
+
     private fun Logger.printHeader() = info(
         """
                 
@@ -48,33 +50,47 @@ open class KmbedGradlePlugin : Plugin<Project> {
             project.afterEvaluate {
                 extension.addDefaultResourceSets(project)
                 for (resourceSet in extension.resourceSets) {
-                    initForResourceSet(project, extension, resourceSet)
+                    registerTasksForResourceSet(project, extension, resourceSet)
                 }
             }
         }
     }
 
-    private fun initForResourceSet(
+    private fun registerTasksForResourceSet(
         project: Project, extension: KmbedProjectExtension, resourceSet: KmbedResourceSet
     ) {
         val name = resourceSet.name
         val compilationName = resourceSet.compilationName.get()
+        val targetName = resourceSet.targetName.get()
         // @formatter:off
-        val compilation = project.kmpExtension.targets.flatMap(KotlinTarget::compilations)
+        val compilation = project.kmpExtension.targets
+            .first { target -> target.targetName == targetName }
+            .compilations
             .first { compilation -> compilation.compilationName == compilationName }
         val resourceDirectories = compilation.allKotlinSourceSets
             .flatMap { sourceSet -> sourceSet.resources.srcDirs }
-            .filter(File::exists)
             .toTypedArray()
         // @formatter:on
+
+        // Register task to find all resources for the compilation associated with the given resource set
         project.tasks.register(
             extension.makeTaskName("listResources${name.capitalized()}").get(), KmbedListResourcesTask::class.java
         ) { task ->
-            task.group = "kmbed"
+            task.group = TASK_GROUP
             task.description = "Index all resources for the $name resource set"
             task.maxRecursionDepth.set(extension.maxRecursionDepth)
             task.directories.from(*resourceDirectories)
             task.excludes.addAll(resourceSet.excludes)
+        }
+
+        if (!resourceSet.extractDependencyResources.get()) return // Early return if we don't need resource extraction
+
+        // Register task to extract all resources from incoming dependencies to make them accessible on applicable targets
+        project.tasks.register(
+            extension.makeTaskName("extractResources${name.capitalized()}").get(), KmbedExtractResourcesTask::class.java
+        ) { task ->
+            task.group = TASK_GROUP
+            task.description = "Extract all dependency resources for the $name resource set"
         }
     }
 }

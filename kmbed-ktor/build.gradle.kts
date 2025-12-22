@@ -31,6 +31,7 @@ defaultDokkaConfig()
 
 @OptIn(ExperimentalWasmDsl::class) //
 kotlin {
+    withSourcesJar(true)
     compilerOptions {
         freeCompilerArgs.add("-Xreturn-value-checker=check")
     }
