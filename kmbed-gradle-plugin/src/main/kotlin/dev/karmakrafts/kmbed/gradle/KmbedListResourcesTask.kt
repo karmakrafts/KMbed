@@ -63,14 +63,12 @@ abstract class KmbedListResourcesTask @Inject constructor(
 
     @TaskAction
     fun invoke() {
-        val excludeMatchers = excludes.get().map { pattern -> FileSystems.getDefault().getPathMatcher("glob:$pattern") }
         // @formatter:off
-        // First construct a curried boolean function that applies all exclude filters
-        val excludeFilter: (Path) -> Boolean = excludeMatchers
+        val excludeFilter: (Path) -> Boolean = excludes.get()
+            .map { pattern -> FileSystems.getDefault().getPathMatcher("glob:$pattern") }
             .map<_, Function1<Path, Boolean>> { matcher -> matcher::matches }
             .reduce { acc, fn -> { path -> acc(path) || fn(path) } }
         // @formatter:on
-        // Recurse over the input directory and apply the filter function, assign result to task output
         resources.from(*directories.flatMap { file -> gatherResources(file, excludeFilter) }.toTypedArray())
     }
 }
