@@ -19,8 +19,10 @@ package dev.karmakrafts.kmbed.gradle
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.logging.Logger
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
 
+@Suppress("UNUSED") // This is constructed/invoked by Gradle dynamically
 open class KmbedGradlePlugin : Plugin<Project> {
     companion object {
         private const val TASK_GROUP: String = "kmbed"
@@ -33,6 +35,7 @@ open class KmbedGradlePlugin : Plugin<Project> {
             8wdP  8YbmdP8 88b. .d88b .d88  Resource Compiler
             88Yb  8  "  8 8  8 8.dP' 8  8  Version ${BuildInfo.VERSION}
             8  Yb 8     8 88P' `Y88P `Y88
+            
         """.trimIndent()
     )
 
@@ -47,6 +50,7 @@ open class KmbedGradlePlugin : Plugin<Project> {
         pluginManager.withPlugin(KMP_PLUGIN_ID) {
             val defaultNamespace = project.group.toString()
             val extension = project.extensions.create("kmbed", KmbedProjectExtension::class.java, defaultNamespace)
+            extension.generatedDirectory.set(project.layout.buildDirectory.dir("kmbed"))
             project.afterEvaluate {
                 extension.addDefaultResourceSets(project)
                 for (resourceSet in extension.resourceSets) {
@@ -56,9 +60,9 @@ open class KmbedGradlePlugin : Plugin<Project> {
         }
     }
 
-    private fun registerTasksForResourceSet(
+    private fun registerListResourcesTask(
         project: Project, extension: KmbedProjectExtension, resourceSet: KmbedResourceSet
-    ) {
+    ): TaskProvider<KmbedListResourcesTask> {
         val name = resourceSet.name
         val compilationName = resourceSet.compilationName.get()
         val targetName = resourceSet.targetName.get()
@@ -73,24 +77,57 @@ open class KmbedGradlePlugin : Plugin<Project> {
         // @formatter:on
 
         // Register task to find all resources for the compilation associated with the given resource set
-        project.tasks.register(
+        return project.tasks.register(
             extension.makeTaskName("listResources${name.capitalized()}").get(), KmbedListResourcesTask::class.java
         ) { task ->
             task.group = TASK_GROUP
             task.description = "Index all resources for the $name resource set"
             task.maxRecursionDepth.set(extension.maxRecursionDepth)
-            task.directories.from(*resourceDirectories)
+            task.inputDirectories.from(*resourceDirectories)
             task.excludes.addAll(resourceSet.excludes)
         }
+    }
 
-        if (!resourceSet.extractDependencyResources.get()) return // Early return if we don't need resource extraction
+    private fun registerGenerateResourceIndexTask(
+        project: Project,
+        extension: KmbedProjectExtension,
+        resourceSet: KmbedResourceSet,
+        listTask: TaskProvider<KmbedListResourcesTask>
+    ): TaskProvider<KmbedGenerateResourceIndexTask> {
+        val name = resourceSet.name
+        return project.tasks.register(
+            extension.makeTaskName("generateResourceIndex${name.capitalized()}").get(),
+            KmbedGenerateResourceIndexTask::class.java
+        ) { task ->
+            task.dependsOn(listTask)
+            task.group = TASK_GROUP
+            task.description = "Generate a resource index JSON for all exported resources in the resulting artifact"
+            task.resources.from(listTask.map { listTask -> listTask.outputResources })
+            task.outputDirectory.set(resourceSet.generatedResourceDirectory) // Index gets generated into generated resource root
+            // TODO: implement proper resource root
+        }
+    }
 
+    private fun registerExtractResourcesTask(
+        project: Project, extension: KmbedProjectExtension, resourceSet: KmbedResourceSet
+    ): TaskProvider<KmbedExtractResourcesTask> {
+        val name = resourceSet.name
         // Register task to extract all resources from incoming dependencies to make them accessible on applicable targets
-        project.tasks.register(
+        return project.tasks.register(
             extension.makeTaskName("extractResources${name.capitalized()}").get(), KmbedExtractResourcesTask::class.java
         ) { task ->
             task.group = TASK_GROUP
             task.description = "Extract all dependency resources for the $name resource set"
+            task.outputDirectory.set(resourceSet.generatedResourceDirectory) // Extracted resources are also copied to the generated resource root
         }
+    }
+
+    private fun registerTasksForResourceSet(
+        project: Project, extension: KmbedProjectExtension, resourceSet: KmbedResourceSet
+    ) {
+        val listTask = registerListResourcesTask(project, extension, resourceSet)
+        val generateIndexTask = registerGenerateResourceIndexTask(project, extension, resourceSet, listTask)
+        if (!resourceSet.extractDependencyResources.get()) return // Early return if we don't need resource extraction
+        registerExtractResourcesTask(project, extension, resourceSet)
     }
 }

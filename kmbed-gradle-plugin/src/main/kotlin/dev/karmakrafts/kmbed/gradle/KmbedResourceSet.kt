@@ -17,6 +17,7 @@
 package dev.karmakrafts.kmbed.gradle
 
 import org.gradle.api.Named
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
@@ -29,24 +30,18 @@ open class KmbedResourceSet @Inject constructor( // @formatter:off
     @PublishedApi internal val objects: ObjectFactory
 ) : Named, Serializable { // @formatter:on
     val targetName: Property<String> = objects.property(String::class.java)
-
     val compilationName: Property<String> = objects.property(String::class.java)
-
-    val extractDependencyResources: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
-
+    val generatedSourceDirectory: DirectoryProperty = objects.directoryProperty()
+    val generatedResourceDirectory: DirectoryProperty = objects.directoryProperty()
     val namespace: Property<String> = objects.property(String::class.java)
 
+    val extractDependencyResources: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
     val generateIndex: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
-
     val compression: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
-
     val compressionThreshold: Property<Long> =
         objects.property(Long::class.java).convention(KmbedResourceConfig.DEFAULT_COMPRESSION_THRESHOLD)
-
     val export: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
-
     val excludes: SetProperty<String> = objects.setProperty(String::class.java)
-
     val resources: MapProperty<String, KmbedResourceConfig> =
         objects.mapProperty(String::class.java, KmbedResourceConfig::class.java)
 

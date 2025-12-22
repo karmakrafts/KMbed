@@ -42,7 +42,7 @@ abstract class KmbedListResourcesTask @Inject constructor(
     objectFactory: ObjectFactory
 ) : DefaultTask() {
     @get:InputFiles
-    abstract val directories: ConfigurableFileCollection
+    abstract val inputDirectories: ConfigurableFileCollection
 
     @get:Input
     abstract val excludes: SetProperty<String>
@@ -51,7 +51,7 @@ abstract class KmbedListResourcesTask @Inject constructor(
     abstract val maxRecursionDepth: Property<Int>
 
     @get:OutputFiles
-    val resources: FileCollection
+    val outputResources: FileCollection
         field: ConfigurableFileCollection = objectFactory.fileCollection()
 
     @TaskAction
@@ -64,7 +64,7 @@ abstract class KmbedListResourcesTask @Inject constructor(
 
         logger.info("Compiled exclude filters")
 
-        resources.from(*directories.flatMap { file ->
+        outputResources.from(*inputDirectories.flatMap { file ->
             if (!file.exists()) return@flatMap emptyList()
             logger.info("Gathering resources from ${file.absolutePath}")
             Files.walk(file.toPath(), maxRecursionDepth.get())

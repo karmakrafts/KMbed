@@ -18,12 +18,21 @@ package dev.karmakrafts.kmbed.gradle
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
-import org.gradle.api.tasks.Input
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 
 abstract class KmbedGenerateResourceIndexTask : DefaultTask() {
-    @get:Input
+    @get:InputDirectory
+    abstract val resourcesRoot: DirectoryProperty
+
+    @get:InputFiles
     abstract val resources: ConfigurableFileCollection
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
 
     @TaskAction
     fun invoke() {
