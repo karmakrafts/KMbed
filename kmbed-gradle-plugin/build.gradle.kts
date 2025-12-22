@@ -17,11 +17,10 @@
 import dev.karmakrafts.conventions.configureJava
 import dev.karmakrafts.conventions.defaultDokkaConfig
 import dev.karmakrafts.conventions.setProjectInfo
-import java.nio.file.StandardOpenOption
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
-import kotlin.io.path.outputStream
+import kotlin.io.path.writeText
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -43,8 +42,8 @@ dependencies {
 
 kotlin {
     compilerOptions {
-        freeCompilerArgs.add("-Xcontext-parameters")
         freeCompilerArgs.add("-Xexplicit-backing-fields")
+        freeCompilerArgs.add("-Xreturn-value-checker=check")
     }
     sourceSets {
         main {
@@ -54,16 +53,16 @@ kotlin {
 }
 
 tasks {
-    val buildPath = layout.buildDirectory.asFile.get().toPath()
+    val buildDirectory = layout.buildDirectory.get().asFile
+    val buildVersion = version.toString()
     val createVersionFile by registering {
-        inputs.property("buildPath", buildPath)
+        inputs.property("buildDirectory", buildDirectory)
+        inputs.property("buildVersion", buildVersion)
         doFirst {
-            val path = (buildPath / "generated" / "kmbed.version")
+            val path = (buildDirectory.toPath() / "generated" / "kmbed.version")
             path.deleteIfExists()
             path.parent.createDirectories()
-            path.outputStream(StandardOpenOption.CREATE).bufferedWriter().use {
-                it.write("${rootProject.version}")
-            }
+            path.writeText(buildVersion)
         }
         outputs.upToDateWhen { false } // Always re-generate this file
     }

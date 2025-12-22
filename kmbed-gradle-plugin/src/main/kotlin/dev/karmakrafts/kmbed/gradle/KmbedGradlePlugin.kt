@@ -19,13 +19,11 @@ package dev.karmakrafts.kmbed.gradle
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.logging.Logger
-import org.gradle.api.provider.ProviderFactory
 import org.gradle.internal.extensions.stdlib.capitalized
-import javax.inject.Inject
+import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
+import java.io.File
 
-open class KmbedGradlePlugin @Inject constructor(
-    private val providers: ProviderFactory
-) : Plugin<Project> {
+open class KmbedGradlePlugin : Plugin<Project> {
     private fun Logger.printHeader() = info(
         """
                 
@@ -48,6 +46,7 @@ open class KmbedGradlePlugin @Inject constructor(
             val defaultNamespace = project.group.toString()
             val extension = project.extensions.create("kmbed", KmbedProjectExtension::class.java, defaultNamespace)
             project.afterEvaluate {
+                extension.addDefaultResourceSets(project)
                 for (resourceSet in extension.resourceSets) {
                     initForResourceSet(project, extension, resourceSet)
                 }
@@ -59,12 +58,23 @@ open class KmbedGradlePlugin @Inject constructor(
         project: Project, extension: KmbedProjectExtension, resourceSet: KmbedResourceSet
     ) {
         val name = resourceSet.name
+        val compilationName = resourceSet.compilationName.get()
+        // @formatter:off
+        val compilation = project.kmpExtension.targets.flatMap(KotlinTarget::compilations)
+            .first { compilation -> compilation.compilationName == compilationName }
+        val resourceDirectories = compilation.allKotlinSourceSets
+            .flatMap { sourceSet -> sourceSet.resources.srcDirs }
+            .filter(File::exists)
+            .toTypedArray()
+        // @formatter:on
         project.tasks.register(
             extension.makeTaskName("listResources${name.capitalized()}").get(), KmbedListResourcesTask::class.java
         ) { task ->
             task.group = "kmbed"
             task.description = "Index all resources for the $name resource set"
-            task.maxRecursionDepth = extension.maxRecursionDepth
+            task.maxRecursionDepth.set(extension.maxRecursionDepth)
+            task.directories.from(*resourceDirectories)
+            task.excludes.addAll(resourceSet.excludes)
         }
     }
 }

@@ -26,7 +26,7 @@ import javax.inject.Inject
 
 open class KmbedResourceSet @Inject constructor( // @formatter:off
     private val name: String,
-    objects: ObjectFactory
+    @PublishedApi internal val objects: ObjectFactory
 ) : Named, Serializable { // @formatter:on
     val compilationName: Property<String> = objects.property(String::class.java)
     val namespace: Property<String> = objects.property(String::class.java)
@@ -53,6 +53,6 @@ open class KmbedResourceSet @Inject constructor( // @formatter:off
 
     @KmbedDsl
     inline fun resource(path: String, block: KmbedResourceConfig.() -> Unit) {
-        resources.put(path, KmbedResourceConfig().apply(block))
+        resources.put(path, objects.newInstance(KmbedResourceConfig::class.java).apply(block))
     }
 }

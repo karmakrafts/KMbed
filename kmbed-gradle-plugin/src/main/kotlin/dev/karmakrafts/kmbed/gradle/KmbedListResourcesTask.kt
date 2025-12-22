@@ -26,11 +26,11 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
-import java.io.File
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.inject.Inject
+import kotlin.io.path.isDirectory
 import kotlin.streams.asSequence
 
 /**
@@ -47,28 +47,26 @@ abstract class KmbedListResourcesTask @Inject constructor(
     abstract val excludes: SetProperty<String>
 
     @get:Input
-    abstract var maxRecursionDepth: Property<Int>
+    abstract val maxRecursionDepth: Property<Int>
 
     @get:OutputFiles
     val resources: FileCollection
         field: ConfigurableFileCollection = objectFactory.fileCollection()
 
-    private fun gatherResources(file: File, excludeFilter: (Path) -> Boolean): List<File> { // @formatter:off
-        return Files.walk(file.toPath(), maxRecursionDepth.get())
-            .asSequence()
-            .filterNot(excludeFilter)
-            .map { path -> path.toFile() }
-            .toList()
-    } // @formatter:on
-
     @TaskAction
     fun invoke() {
-        // @formatter:off
         val excludeFilter: (Path) -> Boolean = excludes.get()
             .map { pattern -> FileSystems.getDefault().getPathMatcher("glob:$pattern") }
             .map<_, Function1<Path, Boolean>> { matcher -> matcher::matches }
-            .reduce { acc, fn -> { path -> acc(path) || fn(path) } }
-        // @formatter:on
-        resources.from(*directories.flatMap { file -> gatherResources(file, excludeFilter) }.toTypedArray())
+            .fold({ false }) { acc, fn -> { path -> acc(path) || fn(path) } }
+
+        resources.from(*directories.flatMap { file ->
+            Files.walk(file.toPath(), maxRecursionDepth.get())
+                .asSequence()
+                .filterNot(Path::isDirectory)
+                .filterNot(excludeFilter)
+                .map(Path::toFile)
+                .toList()
+        }.toTypedArray())
     }
 }

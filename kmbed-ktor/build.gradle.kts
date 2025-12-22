@@ -29,7 +29,11 @@ plugins {
 configureJava(libs.versions.java)
 defaultDokkaConfig()
 
-@OptIn(ExperimentalWasmDsl::class) kotlin {
+@OptIn(ExperimentalWasmDsl::class) //
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xreturn-value-checker=check")
+    }
     jvmToolchain(java.toolchain.languageVersion.get().asInt())
     jvm()
     androidLibrary {

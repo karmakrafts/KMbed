@@ -30,7 +30,7 @@ open class KmbedProjectExtension @Inject constructor( // @formatter:off
     objects: ObjectFactory,
     defaultNamespace: String
 ) { // @formatter:on
-    val taskNamePrefix: Property<Boolean> = objects.property(Boolean::class.java)
+    val taskNamePrefix: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
     val compression: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
     val compressionThreshold: Property<Long> =
         objects.property(Long::class.java).convention(KmbedResourceConfig.DEFAULT_COMPRESSION_THRESHOLD)
@@ -61,26 +61,21 @@ open class KmbedProjectExtension @Inject constructor( // @formatter:off
             else name
         }
     }
-}
 
-@KmbedDsl
-context(project: Project) inline fun NamedDomainObjectContainer<KmbedResourceSet>.defaultResourceSets(
-    crossinline initializer: KmbedResourceSet.() -> Unit = {}
-) {
-    val kmbedExtension = project.kmbedExtension
-    project.pluginManager.withPlugin(KMP_PLUGIN_ID) {
-        for (target in project.kmpExtension.targets) {
-            if (target.platformType == KotlinPlatformType.common) continue
-            for (compilation in target.compilations) {
-                create("${compilation.target.name}${compilation.name.capitalized()}") { set ->
-                    set.compilationName.set(compilation.name)
-                    set.namespace.set(kmbedExtension.namespace)
-                    set.compression.set(kmbedExtension.compression)
-                    set.compressionThreshold.set(kmbedExtension.compressionThreshold)
-                    set.export.set(kmbedExtension.export)
-                    set.generateIndex.set(kmbedExtension.generateIndex)
-                    set.excludes.addAll(kmbedExtension.excludes)
-                    set.initializer()
+    internal fun addDefaultResourceSets(project: Project) {
+        project.pluginManager.withPlugin(KMP_PLUGIN_ID) {
+            for (target in project.kmpExtension.targets) {
+                if (target.platformType == KotlinPlatformType.common) continue
+                for (compilation in target.compilations) {
+                    resourceSets.create("${compilation.target.name}${compilation.name.capitalized()}") { set ->
+                        set.compilationName.set(compilation.compilationName)
+                        set.namespace.set(namespace)
+                        set.compression.set(compression)
+                        set.compressionThreshold.set(compressionThreshold)
+                        set.export.set(export)
+                        set.generateIndex.set(generateIndex)
+                        set.excludes.addAll(excludes)
+                    }
                 }
             }
         }
