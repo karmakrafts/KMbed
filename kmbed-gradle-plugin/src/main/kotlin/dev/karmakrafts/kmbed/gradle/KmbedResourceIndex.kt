@@ -20,8 +20,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 internal data class KmbedResourceIndex(
-    val version: Int,
-    val resources: List<String>
+    val version: Int, val resources: List<String>
 ) {
     companion object {
         const val VERSION: Int = 1

@@ -108,7 +108,7 @@ open class KmbedGradlePlugin : Plugin<Project> {
     private fun registerTasksForResourceSet(
         project: Project, extension: KmbedProjectExtension, resourceSet: KmbedResourceSet
     ) {
-        val generateIndexTask = registerGenerateResourceIndexTask(project, extension, resourceSet)
+        val _ = registerGenerateResourceIndexTask(project, extension, resourceSet)
         if (!resourceSet.extractDependencyResources.get()) return // Early return if we don't need resource extraction
         registerExtractResourcesTask(project, extension, resourceSet)
     }
