@@ -72,6 +72,8 @@ open class KmbedProjectExtension @Inject constructor( // @formatter:off
     }
 
     internal fun addDefaultResourceSets(project: Project) {
+        val srcDir = generatedDirectory.dir("src")
+        val resourcesDir = generatedDirectory.dir("resources")
         for (target in project.kmpExtension.targets) {
             val platformType = target.platformType
             if (platformType == KotlinPlatformType.common) continue
@@ -85,8 +87,8 @@ open class KmbedProjectExtension @Inject constructor( // @formatter:off
                     set.export.set(export)
                     set.generateIndex.set(generateIndex)
                     set.excludes.addAll(excludes)
-                    set.generatedSourceDirectory.set(generatedDirectory.dir("${set.name}GeneratedSources"))
-                    set.generatedResourceDirectory.set(generatedDirectory.dir("${set.name}GeneratedResources"))
+                    set.generatedSourceDirectory.set(srcDir.map { dir -> dir.dir(set.name) })
+                    set.generatedResourceDirectory.set(resourcesDir.map { dir -> dir.dir(set.name) })
                     // Resources are only extracted for web targets by default
                     set.extractDependencyResources.set(platformType in webPlatformTypes)
                 }

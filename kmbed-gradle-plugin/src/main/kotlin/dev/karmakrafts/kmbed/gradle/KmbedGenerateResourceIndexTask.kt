@@ -16,26 +16,53 @@
 
 package dev.karmakrafts.kmbed.gradle
 
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.encodeToStream
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.SetProperty
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.div
+import kotlin.io.path.outputStream
+import kotlin.io.path.relativeTo
 
+/**
+ * Generates a __kmbed_resources.json file for a specified resource set.
+ * This may be used by the runtime or by the plugin downstream to extract resources
+ * when consuming a dependency with kMbed resources.
+ */
 abstract class KmbedGenerateResourceIndexTask : DefaultTask() {
-    @get:InputDirectory
-    abstract val resourcesRoot: DirectoryProperty
-
     @get:InputFiles
-    abstract val resources: ConfigurableFileCollection
+    abstract val inputDirectories: ConfigurableFileCollection
+
+    @get:Input
+    abstract val excludes: SetProperty<String>
+
+    @get:Input
+    abstract val maxRecursionDepth: Property<Int>
 
     @get:OutputDirectory
     abstract val outputDirectory: DirectoryProperty
 
+    @OptIn(ExperimentalSerializationApi::class)
     @TaskAction
     fun invoke() {
-
+        // @formatter:off
+        val relativePaths = gatherResources(inputDirectories, excludes, maxRecursionDepth)
+            .map { (rootPath, filePath) -> filePath.relativeTo(rootPath).toString() }
+        // @formatter:on
+        val index = KmbedResourceIndex(KmbedResourceIndex.VERSION, relativePaths)
+        val outputDir = outputDirectory.get().asFile.toPath()
+        val outputFile = outputDir / "__kmbed_resources.json"
+        outputFile.deleteIfExists()
+        outputFile.outputStream().use { stream ->
+            json.encodeToStream(index, stream)
+        }
     }
 }
