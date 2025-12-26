@@ -21,7 +21,6 @@ import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
-import org.gradle.api.provider.Provider
 import org.gradle.api.provider.SetProperty
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
@@ -40,15 +39,11 @@ open class KmbedProjectExtension @Inject constructor( // @formatter:off
     val compressionThreshold: Property<Long> =
         objects.property(Long::class.java).convention(KmbedResourceConfig.DEFAULT_COMPRESSION_THRESHOLD)
     val export: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
-    val generateIndex: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
     val namespace: Property<String> = objects.property(String::class.java).convention(defaultNamespace)
     val maxRecursionDepth: Property<Int> = objects.property(Int::class.java).convention(100)
     val excludes: SetProperty<String> = objects.setProperty(String::class.java)
 
     // Global options
-    val taskNamePrefix: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
-    val commonSourceSetName: Property<String> = objects.property(String::class.java).convention("commonMain")
-    val commonTestSourceSetName: Property<String> = objects.property(String::class.java).convention("commonTest")
     val generatedDirectory: DirectoryProperty = objects.directoryProperty() // This is initially set from the plugin
 
     val resourceSets: NamedDomainObjectContainer<KmbedResourceSet> =
@@ -64,13 +59,6 @@ open class KmbedProjectExtension @Inject constructor( // @formatter:off
         resourceSets.block()
     }
 
-    internal fun makeTaskName(name: String): Provider<String> {
-        return taskNamePrefix.map { taskNamePrefix ->
-            if (taskNamePrefix) "kmbed${name.capitalized()}"
-            else name
-        }
-    }
-
     internal fun addDefaultResourceSets(project: Project) {
         val srcDir = generatedDirectory.dir("src")
         val resourcesDir = generatedDirectory.dir("resources")
@@ -78,15 +66,14 @@ open class KmbedProjectExtension @Inject constructor( // @formatter:off
             val platformType = target.platformType
             if (platformType == KotlinPlatformType.common) continue
             for (compilation in target.compilations) {
-                resourceSets.create("${compilation.target.name}${compilation.name.capitalized()}") { set ->
+                resourceSets.create("${target.name}${compilation.name.capitalized()}") { set ->
                     set.targetName.set(target.targetName)
                     set.compilationName.set(compilation.compilationName)
                     set.namespace.set(namespace)
                     set.compression.set(compression)
                     set.compressionThreshold.set(compressionThreshold)
                     set.export.set(export)
-                    set.generateIndex.set(generateIndex)
-                    set.excludes.addAll(excludes)
+                    set.excludes.set(excludes)
                     set.generatedSourceDirectory.set(srcDir.map { dir -> dir.dir(set.name) })
                     set.generatedResourceDirectory.set(resourcesDir.map { dir -> dir.dir(set.name) })
                     // Resources are only extracted for web targets by default

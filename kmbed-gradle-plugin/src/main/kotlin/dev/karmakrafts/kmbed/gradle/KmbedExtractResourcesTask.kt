@@ -16,27 +16,54 @@
 
 package dev.karmakrafts.kmbed.gradle
 
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.decodeFromStream
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import org.jetbrains.kotlin.gradle.internal.ensureParentDirsCreated
+import java.util.jar.JarFile
 
 /**
  * A special task only used for web targets in order to extract embedded
  * resources from the KLIB file(s) correctly to make them accessible to fetch
- * from the web root.
+ * from the generated resources root.
  */
 abstract class KmbedExtractResourcesTask : DefaultTask() {
     @get:InputFiles
-    abstract val artifacts: ConfigurableFileCollection
+    abstract val artifactFiles: ConfigurableFileCollection
 
     @get:OutputDirectory
     abstract val outputDirectory: DirectoryProperty
 
+    @OptIn(ExperimentalSerializationApi::class)
     @TaskAction
     fun invoke() {
-
+        val files = artifactFiles.asSequence().filter { file -> file.extension == "klib" }
+        val outputDir = outputDirectory.get()
+        loop@ for (file in files) JarFile(file).use { jarFile ->
+            val indexEntry = jarFile.getJarEntry("__kmbed_resources.json") ?: continue@loop
+            val index = jarFile.getInputStream(indexEntry).use { stream ->
+                json.decodeFromStream<KmbedResourceIndex>(stream)
+            }
+            check(index.version >= KmbedResourceIndex.VERSION) {
+                "Resource index version in ${file.absolutePath} is incompatible with current kMbed version"
+            }
+            logger.info("Extracting resources from dependency ${file.absolutePath}")
+            for (relativePath in index.resources) {
+                val resourceEntry = jarFile.getJarEntry(relativePath)
+                val targetPath = outputDir.dir(relativePath).asFile
+                targetPath.ensureParentDirsCreated()
+                jarFile.getInputStream(resourceEntry).use { inputStream ->
+                    targetPath.outputStream().use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+                logger.info("Extracted resource to ${targetPath.absolutePath}")
+            }
+        }
     }
 }

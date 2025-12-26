@@ -23,6 +23,7 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
+import org.gradle.internal.extensions.stdlib.capitalized
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import java.io.Serializable
 import javax.inject.Inject
@@ -38,7 +39,6 @@ open class KmbedResourceSet @Inject constructor( // @formatter:off
     val namespace: Property<String> = objects.property(String::class.java)
 
     val extractDependencyResources: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
-    val generateIndex: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
     val compression: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
     val compressionThreshold: Property<Long> =
         objects.property(Long::class.java).convention(KmbedResourceConfig.DEFAULT_COMPRESSION_THRESHOLD)
@@ -46,6 +46,9 @@ open class KmbedResourceSet @Inject constructor( // @formatter:off
     val excludes: SetProperty<String> = objects.setProperty(String::class.java)
     val resources: MapProperty<String, KmbedResourceConfig> =
         objects.mapProperty(String::class.java, KmbedResourceConfig::class.java)
+
+    internal inline val fullTargetName: String
+        get() = "${targetName.get()}${compilationName.get().capitalized()}"
 
     override fun getName(): String = name
 
@@ -69,5 +72,16 @@ open class KmbedResourceSet @Inject constructor( // @formatter:off
             .first { target -> target.targetName == targetName.get() }
             .compilations
             .first { compilation -> compilation.compilationName == compilationName.get() }
+    } // @formatter:on
+
+    /**
+     * This combines the already specified excludes from this resource set
+     * with generated patterns for all resources which have an explicit export override.
+     */
+    internal fun compileExportExcludes(): Set<String> { // @formatter:off
+        return resources.get()
+            .filter { (_, config) -> !config.export.get() }
+            .map { (path, _) -> path }
+            .toSet()
     } // @formatter:on
 }
