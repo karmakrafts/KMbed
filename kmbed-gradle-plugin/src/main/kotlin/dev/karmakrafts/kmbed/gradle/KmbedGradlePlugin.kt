@@ -21,7 +21,9 @@ import org.gradle.api.Project
 import org.gradle.api.logging.Logger
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinMetadataTarget
 
 @Suppress("UNUSED") // This is constructed/invoked by Gradle dynamically
 open class KmbedGradlePlugin : Plugin<Project> {
@@ -40,6 +42,7 @@ open class KmbedGradlePlugin : Plugin<Project> {
         """.trimIndent()
     )
 
+    @OptIn(ExperimentalKotlinGradlePluginApi::class)
     override fun apply(project: Project) {
         val logger = project.logger
         logger.printHeader()
@@ -52,6 +55,7 @@ open class KmbedGradlePlugin : Plugin<Project> {
             val defaultNamespace = project.group.toString()
             val extension = project.extensions.create("kmbed", KmbedProjectExtension::class.java, defaultNamespace)
             extension.generatedDirectory.set(project.layout.buildDirectory.dir("kmbed"))
+
             project.afterEvaluate {
                 extension.addDefaultResourceSets(project)
 
@@ -63,17 +67,31 @@ open class KmbedGradlePlugin : Plugin<Project> {
                 // Register common generation task
                 val generateSourcesCommonTask = registerGenerateSourcesCommonTask(project, extension)
                 val generateSourcesCommonTestTask = registerGenerateSourcesCommonTask(project, extension, true)
+                project.tasks.apply {
+                    named("sourcesJar") { task -> task.dependsOn(generateSourcesCommonTask) }
+                    // Needed for compatibility with Dokka
+                    matching { task -> task.name == "dokkaGeneratePublicationHtml" }.configureEach { task ->
+                        task.dependsOn(generateSourcesCommonTask)
+                    }
+                }
+                project.kmpExtension.targets.withType(KotlinMetadataTarget::class.java).configureEach { target ->
+                    target.compilations.configureEach { compilation ->
+                        compilation.compileTaskProvider.configure { task ->
+                            task.dependsOn(generateSourcesCommonTask)
+                        }
+                    }
+                }
 
                 // Configure all resource sets
                 for (resourceSet in extension.resourceSets) {
                     val compilation = resourceSet.getCompilation(project)
-                    // KGP bodged the task names here..
+                    // KGP completely bodges the task names here with 0% consistency -.-
                     val processResourcesName =
                         if ("main" in compilation.name.lowercase()) "${resourceSet.targetName.get()}ProcessResources"
                         else "${resourceSet.fullTargetName}ProcessResources"
 
                     // Add the generated kMbed sources and resources to the associated source set's compilation
-                    compilation.defaultSourceSet.apply {
+                    compilation.defaultSourceSet {
                         kotlin.srcDir(resourceSet.generatedSourceDirectory)
                         resources.srcDir(resourceSet.generatedResourceDirectory)
                     }
@@ -100,6 +118,16 @@ open class KmbedGradlePlugin : Plugin<Project> {
                         }
                         named("prepareKotlinIdeaImport") { task ->
                             task.dependsOn(generateSourcesTask, generateIndexTask)
+                        }
+                        // Source tasks also depend on this if present and if we're not a test resource set
+                        if ("test" !in compilation.name.lowercase()) {
+                            named("${compilation.target.name}SourcesJar") { task ->
+                                task.dependsOn(generateSourcesTask, generateIndexTask)
+                            }
+                            // Needed for compatibility with Dokka
+                            matching { task -> task.name == "dokkaGeneratePublicationHtml" }.configureEach { task ->
+                                task.dependsOn(generateSourcesTask)
+                            }
                         }
                     }
 
@@ -148,14 +176,17 @@ open class KmbedGradlePlugin : Plugin<Project> {
         }
     }
 
+    @OptIn(ExperimentalKotlinGradlePluginApi::class)
     private fun registerGenerateSourcesCommonTask(
         project: Project, extension: KmbedProjectExtension, isTest: Boolean = false
     ): TaskProvider<KmbedGenerateSourcesTask> {
         val suffix = if (isTest) "Test" else ""
         val sourceSetName = if (isTest) extension.commonTestSourceSetName.get() else extension.commonSourceSetName.get()
-        val resourceDirs = project.kmpExtension.sourceSets.getByName(sourceSetName).resources.srcDirs.toTypedArray()
+        val sourceSet = project.kmpExtension.sourceSets.getByName(sourceSetName)
+        val resourceDirs = sourceSet.resources.srcDirs.toTypedArray()
         val outputDir =
             if (isTest) extension.generatedCommonTestSourceDirectory else extension.generatedCommonSourceDirectory
+        sourceSet.kotlin.srcDir(outputDir) // Add generated common sources to the same source set
         return project.tasks.register(
             "kmbedGenerateSourcesCommon$suffix", KmbedGenerateSourcesTask::class.java
         ) { task ->
@@ -164,6 +195,7 @@ open class KmbedGradlePlugin : Plugin<Project> {
             task.inputDirectories.from(*resourceDirs)
             task.platformType.set(KotlinPlatformType.common)
             task.outputDirectory.set(outputDir)
+            task.namespace.set(extension.namespace)
         }
     }
 
@@ -188,6 +220,7 @@ open class KmbedGradlePlugin : Plugin<Project> {
             task.inputDirectories.from(*resourceDirectories)
             task.platformType.set(resourceSet.getCompilation(project).platformType)
             task.outputDirectory.set(resourceSet.generatedSourceDirectory)
+            task.namespace.set(extension.namespace)
             task.initializer()
         }
     }

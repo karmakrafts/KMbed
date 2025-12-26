@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kmbed.gradle
 
+import com.squareup.kotlinpoet.FileSpec
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
@@ -33,11 +34,27 @@ abstract class KmbedGenerateSourcesTask : DefaultTask() {
     @get:Input
     abstract val platformType: Property<KotlinPlatformType>
 
+    @get:Input
+    abstract val namespace: Property<String>
+
     @get:OutputDirectory
     abstract val outputDirectory: DirectoryProperty
 
     @TaskAction
     fun invoke() {
+        FileSpec.builder(namespace.get(), "__kmbed_resources.kt").apply {
+            when (val platformType = platformType.get()) {
+                KotlinPlatformType.common -> generateForCommon()
+                else -> generateForPlatform(platformType)
+            }
+        }.build().writeTo(outputDirectory.get().asFile)
+    }
+
+    private fun FileSpec.Builder.generateForCommon() {
+
+    }
+
+    private fun FileSpec.Builder.generateForPlatform(platform: KotlinPlatformType) {
 
     }
 }
