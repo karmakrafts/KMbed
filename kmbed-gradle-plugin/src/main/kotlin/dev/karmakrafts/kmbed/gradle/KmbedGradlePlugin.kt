@@ -21,6 +21,7 @@ import org.gradle.api.Project
 import org.gradle.api.logging.Logger
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
 @Suppress("UNUSED") // This is constructed/invoked by Gradle dynamically
 open class KmbedGradlePlugin : Plugin<Project> {
@@ -59,6 +60,10 @@ open class KmbedGradlePlugin : Plugin<Project> {
                 val extractTasks = ArrayList<TaskProvider<KmbedExtractResourcesTask>>()
                 val generateSourcesTasks = ArrayList<TaskProvider<KmbedGenerateSourcesTask>>()
 
+                // Register common generation task
+                val generateSourcesCommonTask = registerGenerateSourcesCommonTask(project, extension)
+                val generateSourcesCommonTestTask = registerGenerateSourcesCommonTask(project, extension, true)
+
                 // Configure all resource sets
                 for (resourceSet in extension.resourceSets) {
                     val compilation = resourceSet.getCompilation(project)
@@ -83,6 +88,8 @@ open class KmbedGradlePlugin : Plugin<Project> {
 
                     val generateSourcesTask = registerGenerateSourcesTask(project, extension, resourceSet) {
                         dependsOn(generateIndexTask, cleanTask) // Index must be generated before sources
+                        if ("test" in compilation.name.lowercase()) dependsOn(generateSourcesCommonTestTask)
+                        else dependsOn(generateSourcesCommonTask)
                     }
                     generateSourcesTasks += generateSourcesTask
 
@@ -138,6 +145,25 @@ open class KmbedGradlePlugin : Plugin<Project> {
                     task.description = "Generate Kotlin sources for all resource sets"
                 }
             }
+        }
+    }
+
+    private fun registerGenerateSourcesCommonTask(
+        project: Project, extension: KmbedProjectExtension, isTest: Boolean = false
+    ): TaskProvider<KmbedGenerateSourcesTask> {
+        val suffix = if (isTest) "Test" else ""
+        val sourceSetName = if (isTest) extension.commonTestSourceSetName.get() else extension.commonSourceSetName.get()
+        val resourceDirs = project.kmpExtension.sourceSets.getByName(sourceSetName).resources.srcDirs.toTypedArray()
+        val outputDir =
+            if (isTest) extension.generatedCommonTestSourceDirectory else extension.generatedCommonSourceDirectory
+        return project.tasks.register(
+            "kmbedGenerateSourcesCommon$suffix", KmbedGenerateSourcesTask::class.java
+        ) { task ->
+            task.group = TASK_GROUP
+            task.description = "Generate Kotlin sources for the common$suffix resource set"
+            task.inputDirectories.from(*resourceDirs)
+            task.platformType.set(KotlinPlatformType.common)
+            task.outputDirectory.set(outputDir)
         }
     }
 

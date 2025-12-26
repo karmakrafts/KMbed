@@ -45,6 +45,10 @@ open class KmbedProjectExtension @Inject constructor( // @formatter:off
 
     // Global options
     val generatedDirectory: DirectoryProperty = objects.directoryProperty() // This is initially set from the plugin
+    val commonSourceSetName: Property<String> = objects.property(String::class.java).convention("commonMain")
+    val commonTestSourceSetName: Property<String> = objects.property(String::class.java).convention("commonTest")
+    val generatedCommonSourceDirectory: DirectoryProperty = objects.directoryProperty().convention(generatedDirectory.dir(commonSourceSetName))
+    val generatedCommonTestSourceDirectory: DirectoryProperty = objects.directoryProperty().convention(generatedDirectory.dir(commonTestSourceSetName))
 
     val resourceSets: NamedDomainObjectContainer<KmbedResourceSet> =
         objects.domainObjectContainer(KmbedResourceSet::class.java)
