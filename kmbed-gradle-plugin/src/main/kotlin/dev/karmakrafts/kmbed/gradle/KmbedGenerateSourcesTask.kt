@@ -28,13 +28,13 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
 abstract class KmbedGenerateSourcesTask : DefaultTask() {
     @get:InputFiles
-    abstract val resourceFiles: ConfigurableFileCollection
+    abstract val inputDirectories: ConfigurableFileCollection
 
     @get:Input
     abstract val platformType: Property<KotlinPlatformType>
 
     @get:OutputDirectory
-    abstract val sourceDirectory: DirectoryProperty
+    abstract val outputDirectory: DirectoryProperty
 
     @TaskAction
     fun invoke() {

@@ -57,10 +57,16 @@ open class KmbedGradlePlugin : Plugin<Project> {
                 val cleanTasks = ArrayList<TaskProvider<KmbedCleanGeneratedTask>>()
                 val generateIndexTasks = ArrayList<TaskProvider<KmbedGenerateResourceIndexTask>>()
                 val extractTasks = ArrayList<TaskProvider<KmbedExtractResourcesTask>>()
+                val generateSourcesTasks = ArrayList<TaskProvider<KmbedGenerateSourcesTask>>()
 
                 // Configure all resource sets
                 for (resourceSet in extension.resourceSets) {
                     val compilation = resourceSet.getCompilation(project)
+                    // KGP bodged the task names here..
+                    val processResourcesName =
+                        if ("main" in compilation.name.lowercase()) "${resourceSet.targetName.get()}ProcessResources"
+                        else "${resourceSet.fullTargetName}ProcessResources"
+
                     // Add the generated kMbed sources and resources to the associated source set's compilation
                     compilation.defaultSourceSet.apply {
                         kotlin.srcDir(resourceSet.generatedSourceDirectory)
@@ -69,18 +75,44 @@ open class KmbedGradlePlugin : Plugin<Project> {
                     // Register tasks required for this resource set and its associated compilation
                     val cleanTask = registerCleanTask(project, extension, resourceSet)
                     cleanTasks += cleanTask
-                    generateIndexTasks += registerGenerateResourceIndexTask(project, extension, resourceSet)
+
+                    val generateIndexTask = registerGenerateResourceIndexTask(project, extension, resourceSet) {
+                        dependsOn(cleanTask)
+                    }
+                    generateIndexTasks += generateIndexTask
+
+                    val generateSourcesTask = registerGenerateSourcesTask(project, extension, resourceSet) {
+                        dependsOn(generateIndexTask, cleanTask) // Index must be generated before sources
+                    }
+                    generateSourcesTasks += generateSourcesTask
+
+                    project.tasks.apply {
+                        named(processResourcesName) { task -> task.dependsOn(generateSourcesTask, generateIndexTask) }
+                        named(compilation.compileKotlinTaskName) { task ->
+                            task.dependsOn(generateSourcesTask, generateIndexTask)
+                        }
+                        named("prepareKotlinIdeaImport") { task ->
+                            task.dependsOn(generateSourcesTask, generateIndexTask)
+                        }
+                    }
+
                     if (resourceSet.extractDependencyResources.get()) {
                         val extractTask = registerExtractResourcesTask(project, extension, resourceSet) {
                             dependsOn(cleanTask)
                         }
                         extractTasks += extractTask
-                        val processResourcesName =
-                            if ("main" in compilation.name.lowercase()) "${resourceSet.targetName.get()}ProcessResources"
-                            else "${resourceSet.fullTargetName}ProcessResources"
-                        project.tasks.named(processResourcesName) { task -> task.dependsOn(extractTask) }
-                        project.tasks.named(compilation.compileKotlinTaskName) { task -> task.dependsOn(extractTask) }
-                        project.tasks.named("prepareKotlinIdeaImport") { task -> task.dependsOn(extractTask) }
+                        project.tasks.apply {
+                            named(processResourcesName) { task -> task.dependsOn(extractTask) }
+                            named(compilation.compileKotlinTaskName) { task -> task.dependsOn(extractTask) }
+                            named("prepareKotlinIdeaImport") { task -> task.dependsOn(extractTask) }
+                            // These always must run BEFORE the source generation
+                            named("kmbedGenerateSources${resourceSet.name.capitalized()}") { task ->
+                                task.dependsOn(extractTask)
+                            }
+                            named("kmbedGenerateResourceIndex${resourceSet.name.capitalized()}") { task ->
+                                task.dependsOn(extractTask)
+                            }
+                        }
                     }
                 }
 
@@ -100,14 +132,45 @@ open class KmbedGradlePlugin : Plugin<Project> {
                     task.group = TASK_GROUP
                     task.description = "Extract all dependency resources for all resource sets"
                 }
+                project.tasks.register("kmbedGenerateSources") { task ->
+                    task.dependsOn(*generateSourcesTasks.toTypedArray())
+                    task.group = TASK_GROUP
+                    task.description = "Generate Kotlin sources for all resource sets"
+                }
             }
         }
     }
 
-    private fun registerGenerateResourceIndexTask(
+    private inline fun registerGenerateSourcesTask(
         project: Project,
         extension: KmbedProjectExtension,
         resourceSet: KmbedResourceSet,
+        crossinline initializer: KmbedGenerateSourcesTask.() -> Unit = {}
+    ): TaskProvider<KmbedGenerateSourcesTask> {
+        val name = resourceSet.name
+        val compilation = resourceSet.getCompilation(project)
+        // @formatter:off
+        val resourceDirectories = compilation.allKotlinSourceSets
+            .flatMap { sourceSet -> sourceSet.resources.srcDirs }
+            .toTypedArray()
+        // @formatter:on
+        return project.tasks.register(
+            "kmbedGenerateSources${name.capitalized()}", KmbedGenerateSourcesTask::class.java
+        ) { task ->
+            task.group = TASK_GROUP
+            task.description = "Generate Kotlin sources for the $name resource set"
+            task.inputDirectories.from(*resourceDirectories)
+            task.platformType.set(resourceSet.getCompilation(project).platformType)
+            task.outputDirectory.set(resourceSet.generatedSourceDirectory)
+            task.initializer()
+        }
+    }
+
+    private inline fun registerGenerateResourceIndexTask(
+        project: Project,
+        extension: KmbedProjectExtension,
+        resourceSet: KmbedResourceSet,
+        crossinline initializer: KmbedGenerateResourceIndexTask.() -> Unit = {}
     ): TaskProvider<KmbedGenerateResourceIndexTask> {
         val name = resourceSet.name
         val compilation = resourceSet.getCompilation(project)
@@ -127,6 +190,7 @@ open class KmbedGradlePlugin : Plugin<Project> {
             task.maxRecursionDepth.set(extension.maxRecursionDepth)
             task.excludes.set(resourceSet.excludes.get() + resourceSet.compileExportExcludes())
             task.outputDirectory.set(resourceSet.generatedResourceDirectory) // Index gets generated into generated resource root
+            task.initializer()
         }
     }
 
