@@ -17,12 +17,11 @@
 package dev.karmakrafts.kmbed.gradle
 
 import kotlinx.serialization.json.Json
-import org.gradle.api.file.FileCollection
-import org.gradle.api.provider.Property
-import org.gradle.api.provider.SetProperty
+import java.io.File
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.io.path.exists
 import kotlin.io.path.isDirectory
 import kotlin.streams.asSequence
 
@@ -38,22 +37,21 @@ internal val json: Json = Json {
 }
 
 internal fun gatherResources(
-    inputDirectories: FileCollection, excludes: SetProperty<String>, maxRecursionDepth: Property<Int>
+    inputDirectories: List<File>, excludes: Set<String>, maxRecursionDepth: Int
 ): List<Pair<Path, Path>> {
     val fileSystem = FileSystems.getDefault()
     // @formatter:off
-    val excludeFilter: (Path) -> Boolean = excludes.get()
+    val excludeFilter: (Path) -> Boolean = excludes
         .map<_, Function1<Path, Boolean>> { pattern -> fileSystem.getPathMatcher("glob:$pattern")::matches }
         .fold({ false }) { acc, fn -> { path -> acc(path) || fn(path) } }
-    return inputDirectories.flatMap { file ->
-        if (!file.exists()) return@flatMap emptyList()
-        val path = file.toPath()
-        Files.walk(path, maxRecursionDepth.get())
+    return inputDirectories.flatMap { dir ->
+        val path = dir.toPath()
+        if (!path.exists()) return@flatMap emptyList()
+        Files.walk(path, maxRecursionDepth)
             .asSequence()
             .filterNot(Path::isDirectory)
             .filterNot(excludeFilter)
-            .map { filePath -> path to filePath } // Pair<rootPath, filePath>
+            .map { filePath -> path to filePath }
             .toList()
     }
-    // @formatter:on
 }

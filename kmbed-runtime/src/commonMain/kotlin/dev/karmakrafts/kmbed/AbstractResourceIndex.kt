@@ -16,7 +16,10 @@
 
 package dev.karmakrafts.kmbed
 
-interface ResourceIndex {
-    val namespace: String
-    operator fun get(path: String): Resource
+abstract class AbstractResourceIndex : ResourceIndex {
+    protected val resources: HashMap<String, Resource> = HashMap()
+
+    override fun get(path: String): Resource {
+        return requireNotNull(resources[path]) { "No resource found under $path" }
+    }
 }

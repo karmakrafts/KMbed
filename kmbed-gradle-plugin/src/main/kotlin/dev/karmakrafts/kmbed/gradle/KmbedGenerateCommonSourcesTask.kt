@@ -20,38 +20,22 @@ import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeSpec
-import org.gradle.api.file.ConfigurableFileCollection
-import org.gradle.api.tasks.InputFiles
 import kotlin.io.path.nameWithoutExtension
-import kotlin.io.path.relativeTo
 
-abstract class KmbedGenerateSourcesTask : AbstractKmbedGenerateSourcesTask() {
-    @get:InputFiles
-    abstract val commonResourceDirectories: ConfigurableFileCollection
-
+abstract class KmbedGenerateCommonSourcesTask : AbstractKmbedGenerateSourcesTask() {
     override fun FileSpec.Builder.generateFile() {
         // @formatter:off
         val typeBuilder = TypeSpec.objectBuilder("Res")
-            .addModifiers(KModifier.PUBLIC, KModifier.ACTUAL)
+            .addModifiers(KModifier.PUBLIC, KModifier.EXPECT)
             .superclass(abstractResourceIndexType)
-            .addProperty(PropertySpec.builder("namespace", String::class, KModifier.ACTUAL, KModifier.OVERRIDE)
-                .initializer(""""${namespace.get()}"""")
-                .build())
+            .addProperty(PropertySpec.builder("namespace", String::class, KModifier.OVERRIDE).build())
         // @formatter:on
         val files = gatherResources(inputDirectories.files.toList(), excludes.get(), maxRecursionDepth.get())
-        val commonFiles =
-            gatherResources(commonResourceDirectories.files.toList(), excludes.get(), maxRecursionDepth.get())
-        for ((rootPath, filePath) in files) {
-            val isActual = commonFiles.any { (root, file) -> root == rootPath && file == filePath }
-            val modifiers = mutableListOf(KModifier.PUBLIC)
-            if (isActual) modifiers += KModifier.ACTUAL
-
+        for ((_, filePath) in files) {
             val fileName = filePath.nameWithoutExtension
             val propName = fileName.replace(wordBoundaryPattern, "_")
-            val relativePath = filePath.relativeTo(rootPath)
             // @formatter:off
-            typeBuilder.addProperty(PropertySpec.builder(propName, String::class, *modifiers.toTypedArray())
-                .initializer(""""$relativePath"""")
+            typeBuilder.addProperty(PropertySpec.builder(propName, String::class, KModifier.PUBLIC, KModifier.EXPECT)
                 .build())
             // @formatter:on
         }
