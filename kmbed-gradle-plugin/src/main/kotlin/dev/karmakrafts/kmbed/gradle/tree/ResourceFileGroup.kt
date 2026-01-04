@@ -18,14 +18,17 @@ package dev.karmakrafts.kmbed.gradle.tree
 
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeSpec
 import dev.karmakrafts.kmbed.gradle.getFriendlyName
 import java.nio.file.Path
 import java.util.*
 import kotlin.io.path.Path
 import kotlin.io.path.div
+import kotlin.io.path.extension
 import kotlin.io.path.name
 import kotlin.io.path.nameWithoutExtension
+import kotlin.io.path.relativeTo
 
 internal data class ResourceFileGroup( // @formatter:off
     override val rootPath: Path,
@@ -41,9 +44,20 @@ internal data class ResourceFileGroup( // @formatter:off
         isActual: (Path) -> Boolean
     ) { // @formatter:on
         val name = getFriendlyName(path.nameWithoutExtension)
+        val permutations = getPermutations()
+        val isActual = permutations.all(isActual)
         val modifiers = EnumSet.of(KModifier.PUBLIC)
-        if (getPermutations().all(isActual)) modifiers += KModifier.ACTUAL
+        if (isActual) modifiers += KModifier.ACTUAL
         val childTypeBuilder = TypeSpec.objectBuilder(name).addModifiers(modifiers)
+        for (permPath in permutations) {
+            val extName = getFriendlyName(permPath.extension)
+            val propertyBuilder = PropertySpec.builder(extName, String::class, modifiers)
+            if (isActual) {
+                val relativePath = permPath.relativeTo(rootPath)
+                propertyBuilder.initializer(""""$relativePath"""")
+            }
+            childTypeBuilder.addProperty(propertyBuilder.build())
+        }
         typeBuilder.addType(childTypeBuilder.build())
     }
 
