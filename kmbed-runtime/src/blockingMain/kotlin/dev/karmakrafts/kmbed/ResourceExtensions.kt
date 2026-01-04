@@ -16,11 +16,7 @@
 
 package dev.karmakrafts.kmbed
 
+import kotlinx.coroutines.runBlocking
 import kotlinx.io.RawSource
 
-interface Resource {
-    val path: String
-    val size: Long
-
-    suspend fun getSource(): RawSource
-}
+fun Resource.getSourceBlocking(): RawSource = runBlocking { getSource() }

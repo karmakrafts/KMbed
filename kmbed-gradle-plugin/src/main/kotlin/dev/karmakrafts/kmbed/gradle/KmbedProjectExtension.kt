@@ -79,7 +79,7 @@ open class KmbedProjectExtension @Inject constructor( // @formatter:off
                     set.compression.set(compression)
                     set.compressionThreshold.set(compressionThreshold)
                     set.export.set(export)
-                    set.excludes.set(excludes)
+                    set.excludes.addAll(excludes)
                     set.generatedSourceDirectory.set(srcDir.map { dir -> dir.dir(set.name) })
                     set.generatedResourceDirectory.set(resourcesDir.map { dir -> dir.dir(set.name) })
                     // Resources are only extracted for web targets by default

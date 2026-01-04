@@ -16,7 +16,6 @@
 
 package dev.karmakrafts.kmbed.gradle
 
-import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
@@ -30,16 +29,6 @@ import org.gradle.api.tasks.TaskAction
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
 abstract class AbstractKmbedGenerateSourcesTask : DefaultTask() {
-    companion object {
-        protected const val RT_PKG_NAME: String = "dev.karmakrafts.kmbed"
-
-        @JvmStatic
-        protected val wordBoundaryPattern: Regex = Regex("""(?<=[a-z0-9])(?=[A-Z])""")
-
-        @JvmStatic
-        protected val abstractResourceIndexType: ClassName = ClassName(RT_PKG_NAME, "AbstractResourceIndex")
-    }
-
     @get:InputFiles
     abstract val inputDirectories: ConfigurableFileCollection
 

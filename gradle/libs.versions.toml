@@ -10,6 +10,7 @@ kmbed = "2.0.0"
 kotlin = "2.3.0" # https://github.com/JetBrains/kotlin/releases
 kotlinxSerialization = "1.10.0-RC" # https://github.com/Kotlin/kotlinx.serialization/releases
 kotlinxIo = "0.8.2" # https://github.com/Kotlin/kotlinx-io/releases
+kotlinxCoroutines = "1.10.2"
 karmaConventions = "1.9.4" # https://github.com/karmakrafts/karma-conventions/tags
 kompress = "1.3.0" # https://github.com/karmakrafts/Kompress/tags
 kmmio = "2.0.2" # https://github.com/karmakrafts/kMMIO/tags
@@ -22,6 +23,8 @@ kotlinPoet = "2.2.0" # https://github.com/square/kotlinpoet/releases
 [libraries]
 
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 kotlinx-io-bytestring = { module = "org.jetbrains.kotlinx:kotlinx-io-bytestring", version.ref = "kotlinxIo" }
 kotlinx-io-core = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinxIo" }
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerialization" }

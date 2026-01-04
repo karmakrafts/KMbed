@@ -20,24 +20,27 @@ import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeSpec
-import kotlin.io.path.nameWithoutExtension
+import dev.karmakrafts.kmbed.gradle.tree.ResourceDirectory
+import kotlin.io.path.exists
 
 abstract class KmbedGenerateCommonSourcesTask : AbstractKmbedGenerateSourcesTask() {
     override fun FileSpec.Builder.generateFile() {
         // @formatter:off
         val typeBuilder = TypeSpec.objectBuilder("Res")
             .addModifiers(KModifier.PUBLIC, KModifier.EXPECT)
-            .superclass(abstractResourceIndexType)
+            .superclass(RuntimeTypes.AbstractResourceIndex)
             .addProperty(PropertySpec.builder("namespace", String::class, KModifier.OVERRIDE).build())
         // @formatter:on
-        val files = gatherResources(inputDirectories.files.toList(), excludes.get(), maxRecursionDepth.get())
-        for ((_, filePath) in files) {
-            val fileName = filePath.nameWithoutExtension
-            val propName = fileName.replace(wordBoundaryPattern, "_")
-            // @formatter:off
-            typeBuilder.addProperty(PropertySpec.builder(propName, String::class, KModifier.PUBLIC, KModifier.EXPECT)
-                .build())
-            // @formatter:on
+        for (inputDir in inputDirectories) {
+            val inputDirPath = inputDir.toPath()
+            if (!inputDirPath.exists()) continue // We can't collect from non-existent directories
+            val resourceDir = ResourceDirectory.collect( // @formatter:off
+                path = inputDirPath,
+                maxDepth = maxRecursionDepth.get(),
+                excludes = excludes.get().toList()
+            ) // @formatter:on
+            logger.lifecycle("Collected resource directory: $resourceDir")
+            resourceDir.generateRoot(this, typeBuilder, true) { false }
         }
         addType(typeBuilder.build())
     }

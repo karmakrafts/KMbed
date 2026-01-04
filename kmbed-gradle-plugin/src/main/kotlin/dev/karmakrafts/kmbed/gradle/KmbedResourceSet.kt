@@ -43,7 +43,8 @@ open class KmbedResourceSet @Inject constructor( // @formatter:off
     val compressionThreshold: Property<Long> =
         objects.property(Long::class.java).convention(KmbedResourceConfig.DEFAULT_COMPRESSION_THRESHOLD)
     val export: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
-    val excludes: SetProperty<String> = objects.setProperty(String::class.java)
+    val excludes: SetProperty<String> =
+        objects.setProperty(String::class.java).value(setOf("**/__kmbed_resources.json"))
     val resources: MapProperty<String, KmbedResourceConfig> =
         objects.mapProperty(String::class.java, KmbedResourceConfig::class.java)
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Karma Krafts
+ * Copyright 2026 Karma Krafts
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kmbed
+package dev.karmakrafts.kmbed.gradle
 
-import kotlinx.io.RawSource
+import com.squareup.kotlinpoet.ClassName
 
-interface Resource {
-    val path: String
-    val size: Long
-
-    suspend fun getSource(): RawSource
+internal object RuntimeTypes {
+    const val RT_PKG_NAME: String = "dev.karmakrafts.kmbed"
+    val AbstractResourceIndex: ClassName = ClassName(RT_PKG_NAME, "AbstractResourceIndex")
+    val Resource: ClassName = ClassName(RT_PKG_NAME, "Resource")
 }

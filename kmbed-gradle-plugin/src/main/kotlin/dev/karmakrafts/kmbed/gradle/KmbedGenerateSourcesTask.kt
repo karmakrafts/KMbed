@@ -20,40 +20,42 @@ import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeSpec
+import dev.karmakrafts.kmbed.gradle.tree.ResourceDirectory
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.tasks.InputFiles
-import kotlin.io.path.nameWithoutExtension
-import kotlin.io.path.relativeTo
+import java.io.File
+import kotlin.io.path.exists
 
 abstract class KmbedGenerateSourcesTask : AbstractKmbedGenerateSourcesTask() {
     @get:InputFiles
-    abstract val commonResourceDirectories: ConfigurableFileCollection
+    abstract val commonInputDirectories: ConfigurableFileCollection
 
     override fun FileSpec.Builder.generateFile() {
         // @formatter:off
         val typeBuilder = TypeSpec.objectBuilder("Res")
             .addModifiers(KModifier.PUBLIC, KModifier.ACTUAL)
-            .superclass(abstractResourceIndexType)
+            .superclass(RuntimeTypes.AbstractResourceIndex)
             .addProperty(PropertySpec.builder("namespace", String::class, KModifier.ACTUAL, KModifier.OVERRIDE)
                 .initializer(""""${namespace.get()}"""")
                 .build())
+        val commonResources = commonInputDirectories.files
+            .filter(File::exists)
+            .map { commonInputDir -> ResourceDirectory.collect(
+                path = commonInputDir.toPath(),
+                maxDepth = maxRecursionDepth.get(),
+                excludes = excludes.get().toList()
+            ) }
         // @formatter:on
-        val files = gatherResources(inputDirectories.files.toList(), excludes.get(), maxRecursionDepth.get())
-        val commonFiles =
-            gatherResources(commonResourceDirectories.files.toList(), excludes.get(), maxRecursionDepth.get())
-        for ((rootPath, filePath) in files) {
-            val isActual = commonFiles.any { (root, file) -> root == rootPath && file == filePath }
-            val modifiers = mutableListOf(KModifier.PUBLIC)
-            if (isActual) modifiers += KModifier.ACTUAL
-
-            val fileName = filePath.nameWithoutExtension
-            val propName = fileName.replace(wordBoundaryPattern, "_")
-            val relativePath = filePath.relativeTo(rootPath)
-            // @formatter:off
-            typeBuilder.addProperty(PropertySpec.builder(propName, String::class, *modifiers.toTypedArray())
-                .initializer(""""$relativePath"""")
-                .build())
-            // @formatter:on
+        for (inputDir in inputDirectories) {
+            val inputDirPath = inputDir.toPath()
+            if (!inputDirPath.exists()) continue // We can't collect from non-existent directories
+            val resourceDir = ResourceDirectory.collect( // @formatter:off
+                path = inputDirPath,
+                maxDepth = maxRecursionDepth.get(),
+                excludes = excludes.get().toList()
+            ) // @formatter:on
+            logger.lifecycle("Collected resource directory: $resourceDir")
+            resourceDir.generateRoot(this, typeBuilder, false) { path -> commonResources.any { dir -> path in dir } }
         }
         addType(typeBuilder.build())
     }

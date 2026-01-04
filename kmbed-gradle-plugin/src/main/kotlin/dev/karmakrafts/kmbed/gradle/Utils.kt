@@ -55,3 +55,13 @@ internal fun gatherResources(
             .toList()
     }
 }
+
+private val nameReplacePattern: Regex = Regex("""[._\s/]""")
+private val nameEscapePattern: Regex = Regex("""[0-9](.*)""")
+
+internal fun getFriendlyName(name: String): String {
+    var result = ""
+    if (nameEscapePattern.matches(name)) result += '_'
+    result += name.replace(nameReplacePattern, "_")
+    return result
+}

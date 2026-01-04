@@ -14,9 +14,13 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalKotlinGradlePluginApi::class)
+
+import com.android.build.api.dsl.KotlinMultiplatformAndroidCompilation
 import dev.karmakrafts.conventions.configureJava
 import dev.karmakrafts.conventions.defaultDokkaConfig
 import dev.karmakrafts.conventions.setProjectInfo
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
@@ -64,17 +68,27 @@ kotlin {
         browser()
         nodejs()
     }
-    applyDefaultHierarchyTemplate()
+    applyDefaultHierarchyTemplate {
+        common {
+            group("blocking") {
+                withJvm()
+                withCompilations { it is KotlinMultiplatformAndroidCompilation }
+                withNative()
+            }
+        }
+    }
     sourceSets {
         commonMain {
             dependencies {
                 api(libs.kotlinx.io.bytestring)
                 api(libs.kotlinx.io.core)
+                api(libs.kotlinx.coroutines.core)
             }
         }
         commonTest {
             dependencies {
                 implementation(kotlin("test"))
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
         nativeMain {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Karma Krafts
+ * Copyright 2026 Karma Krafts
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,20 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kmbed
+package dev.karmakrafts.kmbed.gradle.tree
 
-import kotlinx.io.RawSource
+import com.squareup.kotlinpoet.FileSpec
+import com.squareup.kotlinpoet.TypeSpec
+import java.nio.file.Path
 
-interface Resource {
-    val path: String
-    val size: Long
+internal sealed interface Resource {
+    var parent: ResourceDirectory?
+    val rootPath: Path
+    val path: Path
 
-    suspend fun getSource(): RawSource
+    fun generate(
+        fileBuilder: FileSpec.Builder, typeBuilder: TypeSpec.Builder, isCommon: Boolean, isActual: (Path) -> Boolean
+    )
+
+    operator fun contains(path: Path): Boolean = path == this.path
 }

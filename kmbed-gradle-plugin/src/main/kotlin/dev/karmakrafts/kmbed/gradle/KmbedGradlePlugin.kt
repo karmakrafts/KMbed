@@ -222,6 +222,7 @@ open class KmbedGradlePlugin : Plugin<Project> {
             task.platformType.set(KotlinPlatformType.common)
             task.outputDirectory.set(outputDir)
             task.namespace.set(extension.namespace)
+            task.excludes.set(extension.excludes) // TODO: we probably want a common resource set..
             task.maxRecursionDepth.set(extension.maxRecursionDepth)
         }
     }
@@ -252,11 +253,12 @@ open class KmbedGradlePlugin : Plugin<Project> {
             task.group = TASK_GROUP
             task.description = "Generate Kotlin sources for the $name resource set"
             task.inputDirectories.from(*resourceDirectories)
-            task.commonResourceDirectories.from(*commonResourceDirectories)
+            task.commonInputDirectories.from(*commonResourceDirectories)
             task.platformType.set(resourceSet.getCompilation(project).platformType)
             task.outputDirectory.set(resourceSet.generatedSourceDirectory)
             task.namespace.set(extension.namespace)
             task.maxRecursionDepth.set(extension.maxRecursionDepth)
+            task.excludes.set(resourceSet.excludes)
             task.initializer()
         }
     }
